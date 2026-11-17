@@ -1,7 +1,8 @@
 meta:
   environment: node
   toolchain:
-    node: "20"
+    name: node
+    version: "20"
 
 build: {}
 
