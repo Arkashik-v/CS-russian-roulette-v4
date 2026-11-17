@@ -1,0 +1,1679 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#07090F">
+<title>КОД-РУЛЕТКА · C# на выживание</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='28' fill='%23E8A33D'/%3E%3Ccircle cx='32' cy='32' r='12' fill='%236B4E12'/%3E%3Ccircle cx='32' cy='32' r='5' fill='%23241A06'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg0:#07090F; --bg1:#0C101A; --bg2:#121826; --bg3:#1A2233;
+  --line:#243049; --line2:#33425F;
+  --ink:#E8EDF7; --dim:#93A1BC; --faint:#5A6A8A;
+  --violet:#8B5CF6; --violet2:#C4B5FD; --cyan:#38BDF8; --cyan2:#7DD3FC;
+  --green:#34D399; --green2:#6EE7B7; --amber:#E8A33D; --amber2:#FCD34D;
+  --red:#E5484D; --red2:#FF8A8E; --pink:#F472B6;
+  --disp:'Russo One','Arial Black',system-ui,sans-serif;
+  --body:'Inter','Segoe UI',system-ui,Arial,sans-serif;
+  --mono:'JetBrains Mono','Cascadia Code',Consolas,'Courier New',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+*{scrollbar-width:thin;scrollbar-color:#6D5BD0 #0C101A}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:#0C101A;border-radius:8px}
+::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#8B5CF6,#E8A33D);border-radius:8px;border:2px solid #0C101A}
+::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg,#A78BFA,#FCD34D)}
+::selection{background:#E8A33D;color:#1A1204}
+html,body{height:100%}
+body{
+  background:var(--bg0); color:var(--ink); font-family:var(--body);
+  overflow-x:hidden; -webkit-font-smoothing:antialiased;
+}
+body.in-game{overflow:hidden}
+.hidden{display:none!important}
+button{font-family:inherit;cursor:pointer}
+input{font-family:inherit}
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px;border-radius:6px}
+
+/* ── фон: аврора + зерно + виньетка ── */
+.bg{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.aur{position:absolute;border-radius:50%;filter:blur(110px);opacity:.16;will-change:transform}
+.aur.a{width:640px;height:640px;background:#8B5CF6;top:-18%;left:-8%;animation:aurA 26s ease-in-out infinite alternate}
+.aur.b{width:560px;height:560px;background:#E8A33D;bottom:-22%;right:-10%;opacity:.12;animation:aurB 34s ease-in-out infinite alternate}
+.aur.c{width:460px;height:460px;background:#38BDF8;top:34%;left:44%;opacity:.07;animation:aurA 42s ease-in-out infinite alternate-reverse}
+@keyframes aurA{from{transform:translate(0,0) scale(1)}to{transform:translate(90px,60px) scale(1.18)}}
+@keyframes aurB{from{transform:translate(0,0) scale(1.1)}to{transform:translate(-110px,-70px) scale(.92)}}
+.grain{position:fixed;inset:0;z-index:2;pointer-events:none;opacity:.055;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E")}
+.vign{position:fixed;inset:0;z-index:1;pointer-events:none;background:radial-gradient(ellipse at 50% 40%,transparent 45%,rgba(3,4,8,.55) 100%)}
+
+#app{position:relative;z-index:3;min-height:100dvh}
+#app.shake{animation:shakeApp .5s linear}
+@keyframes shakeApp{0%,100%{transform:translate(0,0)}10%{transform:translate(-9px,4px) rotate(-.4deg)}25%{transform:translate(8px,-5px) rotate(.4deg)}40%{transform:translate(-7px,-3px)}55%{transform:translate(6px,4px) rotate(.3deg)}70%{transform:translate(-4px,2px)}85%{transform:translate(3px,-2px)}}
+
+/* ── топбар ── */
+.topbar{
+  position:sticky;top:0;z-index:50;height:64px;display:flex;align-items:center;gap:14px;
+  padding:0 18px;background:rgba(9,12,20,.82);backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line);
+}
+.logo{font-family:var(--disp);font-size:19px;letter-spacing:1px;white-space:nowrap;display:flex;align-items:center;gap:9px}
+.logo .cs{background:linear-gradient(135deg,#A78BFA,#7C3AED);color:#fff;font-size:12px;padding:3px 8px;border-radius:7px;box-shadow:0 0 14px rgba(139,92,246,.5)}
+.logo .r{color:var(--amber2)}
+.tb-chip{font-family:var(--disp);font-size:12px;letter-spacing:1px;color:var(--cyan2);background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.3);padding:5px 11px;border-radius:8px;white-space:nowrap}
+.tb-chip.mode{color:var(--red2);background:rgba(229,72,77,.12);border-color:rgba(229,72,77,.4);animation:chipGlow 1.6s ease-in-out infinite}
+.tb-chip.ide{color:var(--violet2);background:rgba(139,92,246,.12);border-color:rgba(139,92,246,.45)}
+@keyframes chipGlow{0%,100%{box-shadow:0 0 4px rgba(229,72,77,.2)}50%{box-shadow:0 0 16px rgba(229,72,77,.55)}}
+.chambers{display:flex;align-items:center;gap:5px}
+.chambers .lbl{font-size:10px;letter-spacing:1px;color:var(--faint);margin-right:3px;font-weight:600}
+.chdot{width:11px;height:11px;border-radius:50%;border:1.5px solid var(--line2);background:var(--bg1)}
+.chdot.on{background:radial-gradient(circle at 35% 30%,#F6C453,#B8860B);border-color:#E8A33D;box-shadow:0 0 8px rgba(232,163,61,.6)}
+#timer-wrap{margin-left:auto;display:flex;align-items:baseline;gap:5px;font-family:var(--mono)}
+#timer-digits{font-size:26px;font-weight:700;color:var(--green2);min-width:96px;text-align:right;transition:color .3s}
+#timer-digits.warn{color:var(--amber2)}
+#timer-digits.crit{color:var(--red2);animation:critPulse .5s ease-in-out infinite}
+@keyframes critPulse{0%,100%{opacity:1}50%{opacity:.5}}
+#timer-wrap .sec{font-size:11px;color:var(--faint)}
+.conn{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--dim);font-weight:600;letter-spacing:.5px}
+#conn-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px rgba(52,211,153,.7);animation:connPulse 2s infinite}
+#conn-dot.bad{background:var(--red);box-shadow:0 0 8px rgba(229,72,77,.8)}
+@keyframes connPulse{0%,100%{opacity:1}50%{opacity:.55}}
+.icon-btn{width:42px;height:42px;border-radius:11px;border:1px solid var(--line2);background:linear-gradient(180deg,var(--bg3),var(--bg2));color:var(--ink);font-size:18px;display:flex;align-items:center;justify-content:center;transition:transform .12s,box-shadow .2s;position:relative}
+.icon-btn:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(139,92,246,.3)}
+.icon-btn:active{transform:scale(.94)}
+.icon-btn .st{position:absolute;right:5px;top:5px;width:7px;height:7px;border-radius:50%;background:var(--green)}
+.icon-btn.muted .st{background:var(--red)}
+
+/* ── кнопки / панели ── */
+.btn{
+  font-family:var(--disp);font-size:13px;letter-spacing:1.2px;text-transform:uppercase;
+  padding:13px 22px;border-radius:11px;border:none;color:#201405;
+  background:linear-gradient(135deg,#F6C453,#E8A33D 48%,#C97E1F);
+  box-shadow:0 4px 18px rgba(232,163,61,.35),inset 0 1px 0 rgba(255,255,255,.35);
+  transition:transform .12s,box-shadow .2s,filter .2s;
+}
+.btn:hover{transform:translateY(-2px);box-shadow:0 8px 26px rgba(232,163,61,.5),inset 0 1px 0 rgba(255,255,255,.35)}
+.btn:active{transform:scale(.96)}
+.btn:disabled{opacity:.38;cursor:not-allowed;transform:none;box-shadow:none}
+.btn.violet{background:linear-gradient(135deg,#A78BFA,#7C3AED);color:#fff;box-shadow:0 4px 18px rgba(139,92,246,.4)}
+.btn.violet:hover{box-shadow:0 8px 26px rgba(139,92,246,.55)}
+.btn.ghost{background:transparent;color:var(--dim);border:1px solid var(--line2);box-shadow:none}
+.btn.ghost:hover{color:var(--ink);border-color:var(--faint)}
+.panel{background:linear-gradient(180deg,#141B2C,#0F1522);border:1px solid var(--line);border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.45)}
+
+/* ── ЛОББИ ── */
+#scr-lobby{max-width:1220px;margin:0 auto;padding:34px 20px 60px;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:36px;align-items:start}
+.hero-left{display:flex;flex-direction:column;align-items:center;gap:8px}
+.hero-title{font-family:var(--disp);font-size:clamp(30px,4.4vw,46px);letter-spacing:2px;text-align:center;line-height:1.1;text-shadow:0 0 34px rgba(139,92,246,.45)}
+.hero-title .amber{color:var(--amber2);text-shadow:0 0 30px rgba(232,163,61,.55)}
+.hero-sub{color:var(--dim);text-align:center;font-size:14.5px;max-width:460px;line-height:1.55}
+.hero-sub b{color:var(--violet2)}
+#cyl-wrap{position:relative;width:min(480px,88vw);aspect-ratio:1/1;margin-top:14px}
+#lobby-cyl{position:absolute;inset:6%;width:88%;height:88%;opacity:.4;animation:slowRot 70s linear infinite}
+@keyframes slowRot{to{transform:rotate(360deg)}}
+.seat{
+  position:absolute;width:25%;aspect-ratio:1/1;border-radius:50%;transform:translate(-50%,-50%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  background:linear-gradient(180deg,#182136,#101625);border:2px solid var(--line2);
+  box-shadow:0 8px 26px rgba(0,0,0,.5);transition:border-color .25s,box-shadow .25s;text-align:center;padding:6px;
+}
+.seat.empty{border-style:dashed;border-color:var(--line);background:rgba(14,19,32,.6);cursor:pointer}
+.seat.empty:hover{border-color:var(--violet)}
+.seat .num{font-family:var(--disp);font-size:clamp(15px,2.4vw,22px);color:var(--faint)}
+.seat .free{font-size:clamp(7px,1.2vw,9.5px);letter-spacing:1.5px;color:var(--faint);font-weight:600}
+.seat .ava{font-size:clamp(20px,3.6vw,34px);line-height:1;filter:drop-shadow(0 2px 6px rgba(0,0,0,.6))}
+.seat .nm{font-size:clamp(9px,1.5vw,12.5px);font-weight:800;max-width:92%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.seat .tag{font-size:clamp(7px,1.1vw,9px);letter-spacing:1px;color:var(--amber2);font-weight:700}
+.seat.me{border-color:var(--amber);box-shadow:0 0 24px rgba(232,163,61,.45),0 8px 26px rgba(0,0,0,.5)}
+.seat.down{border-style:dashed;border-color:var(--amber);opacity:.65}
+.seat.pop{animation:seatPop .45s cubic-bezier(.2,1.6,.4,1)}
+@keyframes seatPop{from{transform:translate(-50%,-50%) scale(.4);opacity:0}to{transform:translate(-50%,-50%) scale(1);opacity:1}}
+.seat .kick{position:absolute;top:-4px;right:-4px;width:24px;height:24px;border-radius:50%;border:1px solid rgba(229,72,77,.6);background:#2A1418;color:var(--red2);font-size:12px;line-height:1;display:flex;align-items:center;justify-content:center}
+.seat .kick:hover{background:var(--red);color:#fff}
+#hub{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:36%;aspect-ratio:1/1;border-radius:50%;
+  background:radial-gradient(circle at 38% 30%,#232E48,#0D1220 72%);border:2px solid var(--line2);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center;padding:10px;
+  box-shadow:inset 0 0 30px rgba(0,0,0,.6),0 0 40px rgba(139,92,246,.15);
+}
+#hub-title{font-family:var(--disp);font-size:clamp(13px,2.3vw,20px);color:var(--violet2)}
+#hub-sub{font-size:clamp(8px,1.3vw,11px);color:var(--dim);line-height:1.35;max-width:95%}
+#btn-start{margin-top:4px;padding:10px 16px;font-size:clamp(10px,1.6vw,13px);animation:hubPulse 2s ease-in-out infinite}
+@keyframes hubPulse{0%,100%{box-shadow:0 4px 18px rgba(232,163,61,.35)}50%{box-shadow:0 4px 34px rgba(232,163,61,.75)}}
+.opt-row{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:13px;color:var(--dim);max-width:480px}
+.opt-row b{white-space:nowrap}
+.switch{position:relative;width:46px;height:25px;border-radius:20px;background:var(--bg3);border:1px solid var(--line2);transition:background .2s;flex:none}
+.switch::after{content:'';position:absolute;left:3px;top:3px;width:17px;height:17px;border-radius:50%;background:var(--faint);transition:transform .2s,background .2s}
+.switch.on{background:rgba(229,72,77,.25);border-color:rgba(229,72,77,.6)}
+.switch.on::after{transform:translateX(21px);background:var(--red2);box-shadow:0 0 10px rgba(229,72,77,.7)}
+.switch.ide.on{background:rgba(139,92,246,.25);border-color:rgba(139,92,246,.6)}
+.switch.ide.on::after{background:var(--violet2);box-shadow:0 0 10px rgba(139,92,246,.7)}
+.switch:disabled{opacity:.5;cursor:not-allowed}
+.hero-right{display:flex;flex-direction:column;gap:16px}
+.card-pad{padding:20px 22px}
+.card-title{font-family:var(--disp);font-size:13px;letter-spacing:1.5px;color:var(--amber2);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+#inp-name{
+  width:100%;padding:13px 15px;border-radius:11px;border:1px solid var(--line2);background:var(--bg1);
+  color:var(--ink);font-size:15px;font-weight:600;transition:border-color .2s,box-shadow .2s;
+}
+#inp-name:focus{outline:none;border-color:var(--violet);box-shadow:0 0 0 3px rgba(139,92,246,.22)}
+#inp-name::placeholder{color:var(--faint);font-weight:400}
+#avatars{display:flex;gap:7px;margin:12px 0 14px;flex-wrap:wrap}
+.ava-btn{width:44px;height:44px;border-radius:11px;border:1px solid var(--line2);background:var(--bg1);font-size:22px;transition:transform .12s,border-color .15s,box-shadow .2s}
+.ava-btn:hover{transform:translateY(-2px)}
+.ava-btn.sel{border-color:var(--amber);background:rgba(232,163,61,.12);box-shadow:0 0 14px rgba(232,163,61,.4)}
+#btn-join{width:100%}
+#join-note{font-size:12px;color:var(--faint);margin-top:10px;line-height:1.5}
+#you-card{display:flex;align-items:center;gap:14px}
+#you-ava{font-size:42px;filter:drop-shadow(0 3px 8px rgba(0,0,0,.6))}
+#you-name{font-weight:800;font-size:17px}
+#you-role{font-size:12.5px;color:var(--dim);margin-top:3px;line-height:1.45}
+#btn-leave{margin-left:auto;padding:9px 13px;font-size:10px}
+.url-row{display:flex;align-items:center;gap:10px;background:var(--bg1);border:1px solid var(--line2);border-radius:11px;padding:11px 14px;margin-bottom:8px}
+.url-row .u{font-family:var(--mono);font-size:14.5px;color:var(--cyan2);font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.copy-btn{padding:7px 12px;font-size:10px;border-radius:8px;border:1px solid rgba(56,189,248,.4);background:rgba(56,189,248,.1);color:var(--cyan2);font-family:var(--disp);letter-spacing:1px;transition:background .2s}
+.copy-btn:hover{background:rgba(56,189,248,.25)}
+.url-hint{font-size:11.5px;color:var(--faint);line-height:1.5;margin-top:4px}
+.rules{display:flex;flex-direction:column;gap:11px}
+.rule{display:flex;gap:12px;align-items:flex-start}
+.rule .ic{width:38px;height:38px;flex:none;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;border:1px solid}
+.rule h4{font-size:13.5px;font-weight:800;margin-bottom:2px}
+.rule p{font-size:12px;color:var(--dim);line-height:1.5}
+.ic.v{background:rgba(139,92,246,.13);border-color:rgba(139,92,246,.4)}
+.ic.a{background:rgba(232,163,61,.12);border-color:rgba(232,163,61,.4)}
+.ic.c{background:rgba(56,189,248,.1);border-color:rgba(56,189,248,.35)}
+.ic.r{background:rgba(229,72,77,.12);border-color:rgba(229,72,77,.4)}
+
+/* ── ИГРОВОЙ ЭКРАН ── */
+#scr-game{height:calc(100dvh - 64px);display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:14px;padding:14px 16px}
+#arena{display:flex;flex-direction:column;min-height:0;position:relative;overflow:hidden}
+.arena-head{display:flex;align-items:center;gap:14px;padding:14px 18px 10px;flex-wrap:wrap}
+#snip-title{font-family:var(--disp);font-size:16px;color:var(--violet2);letter-spacing:.5px}
+#snip-meta{font-size:11px;color:var(--faint);font-family:var(--mono)}
+#pips{display:flex;gap:5px;margin-left:auto;align-items:center}
+#pips .plbl{font-size:9.5px;letter-spacing:1px;color:var(--faint);font-weight:700;margin-right:2px}
+.pip{width:15px;height:22px}
+.pip path{fill:none;stroke:var(--faint);stroke-width:1.6}
+.pip.full path{fill:var(--red);stroke:var(--red2)}
+.pip.full{filter:drop-shadow(0 0 5px rgba(229,72,77,.8))}
+#pips.hot .pip:not(.full){animation:pipWarn .7s infinite}
+@keyframes pipWarn{0%,100%{opacity:1}50%{opacity:.35}}
+.stats-row{display:flex;gap:18px;padding:0 18px 10px;font-family:var(--mono);font-size:12px;color:var(--dim);flex-wrap:wrap}
+.stats-row b{color:var(--ink);font-size:15px}
+.stats-row .s-lbl{font-size:9.5px;letter-spacing:1px;color:var(--faint);display:block;font-family:var(--body);font-weight:700}
+#st-cpm b{color:var(--cyan2)} #st-acc b{color:var(--green2)} #st-prog b{color:var(--amber2)}
+#timer-bar-wrap{height:5px;background:var(--bg1);margin:0 18px 10px;border-radius:4px;overflow:hidden}
+#timer-bar{height:100%;width:100%;border-radius:4px;background:linear-gradient(90deg,#34D399,#38BDF8);transition:background .4s}
+#timer-bar.warn{background:linear-gradient(90deg,#FCD34D,#E8A33D)}
+#timer-bar.crit{background:linear-gradient(90deg,#FF8A8E,#E5484D)}
+#code-scroll{flex:1;min-height:0;overflow:auto;margin:0 10px;border-radius:12px;background:#0A0E17;border:1px solid #1B2438;box-shadow:inset 0 2px 18px rgba(0,0,0,.55);position:relative}
+#code-inner{position:relative;padding:16px 14px 26px;font-family:var(--mono);font-size:clamp(13px,1.55vw,17px);line-height:1.85;min-width:max-content}
+.cl{display:flex;white-space:pre;position:relative;border-radius:6px}
+.cl.active{background:rgba(139,92,246,.07)}
+.ln{flex:none;width:3.2ch;text-align:right;margin-right:16px;color:#33415E;user-select:none;font-size:.8em;line-height:2.3}
+.cl.active .ln{color:var(--violet)}
+.ch{opacity:.4;transition:opacity .1s;border-radius:3px}
+.ch.ok{opacity:1}
+.ch.auto{opacity:.5}
+/* IDE: закрывающий символ уже подставлен и ждёт своей очереди */
+.ch.ghost{
+  opacity:.95;color:var(--amber2)!important;background:rgba(232,163,61,.13);
+  border-bottom:1px dashed rgba(252,211,77,.75);box-shadow:0 0 10px rgba(232,163,61,.22);
+}
+.ch.ghost-pop{animation:ghostPop .38s cubic-bezier(.2,1.7,.4,1)}
+@keyframes ghostPop{0%{transform:scale(1.6);background:rgba(252,211,77,.6);box-shadow:0 0 22px rgba(252,211,77,.8)}100%{transform:scale(1)}}
+.ch.over-flash{animation:overFlash .3s ease}
+@keyframes overFlash{0%{background:rgba(139,92,246,.65);box-shadow:0 0 16px rgba(139,92,246,.8)}100%{background:transparent}}
+.ch.cur{opacity:1;background:var(--amber2);color:#141005!important;box-shadow:0 0 12px rgba(252,211,77,.65);animation:caret 1.05s step-end infinite}
+@keyframes caret{0%,100%{background:var(--amber2)}50%{background:#C9962E}}
+.ch.cur.bad{background:var(--red)!important;color:#fff!important;box-shadow:0 0 14px rgba(229,72,77,.9);animation:none}
+.tk-k{color:#C4B5FD}.tk-t{color:#7DD3FC}.tk-s{color:#FCD34D}.tk-c{color:#64748B;font-style:italic}
+.tk-n{color:#FDBA74}.tk-f{color:#6EE7B7}.tk-i{color:#E2E8F0}.tk-p{color:#8FA3C4}.tk-w{color:#E2E8F0}
+#code-inner.jolt{animation:jolt .18s linear}
+@keyframes jolt{0%,100%{transform:translateX(0)}30%{transform:translateX(-5px)}65%{transform:translateX(4px)}}
+#arena.dead-view #code-scroll{filter:grayscale(.75) brightness(.75)}
+.arena-foot{padding:9px 18px 13px;font-size:11px;color:var(--faint);display:flex;gap:14px;flex-wrap:wrap}
+.arena-foot b{color:var(--dim)}
+#ide-hint b{color:var(--violet2)}
+#kbd{position:absolute;bottom:0;left:0;width:2px;height:2px;opacity:0;border:none;font-size:16px;background:transparent;color:transparent;resize:none}
+#focus-veil{
+  position:absolute;inset:0;z-index:6;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;
+  background:rgba(7,9,15,.78);backdrop-filter:blur(3px);cursor:pointer;border-radius:12px;text-align:center;padding:20px;
+}
+#focus-veil .big{font-family:var(--disp);font-size:19px;color:var(--amber2);animation:veilPulse 1.6s infinite}
+#focus-veil .sm{font-size:12.5px;color:var(--dim)}
+@keyframes veilPulse{0%,100%{opacity:1}50%{opacity:.55}}
+#arena-banner{margin:0 18px 8px;padding:10px 14px;border-radius:10px;font-size:13px;font-weight:600;line-height:1.45;border:1px solid}
+#arena-banner.warn{background:rgba(232,163,61,.1);border-color:rgba(232,163,61,.4);color:var(--amber2)}
+#arena-banner.dead{background:rgba(229,72,77,.1);border-color:rgba(229,72,77,.4);color:var(--red2)}
+#arena-banner.info{background:rgba(56,189,248,.08);border-color:rgba(56,189,248,.3);color:var(--cyan2)}
+#done-stamp{
+  position:absolute;top:74px;right:26px;z-index:5;transform:rotate(4deg);
+  font-family:var(--disp);font-size:15px;color:var(--green2);border:3px solid var(--green);
+  padding:10px 16px;border-radius:10px;background:rgba(9,20,15,.88);letter-spacing:1px;
+  box-shadow:0 0 26px rgba(52,211,153,.4);animation:stampIn .35s cubic-bezier(.2,1.8,.4,1);text-align:center;line-height:1.5;
+}
+#done-stamp small{display:block;font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:0}
+@keyframes stampIn{from{transform:rotate(4deg) scale(2.2);opacity:0}to{transform:rotate(4deg) scale(1);opacity:1}}
+
+/* ── сайдбар ── */
+#sidebar{display:flex;flex-direction:column;gap:12px;min-height:0}
+.side-title{font-family:var(--disp);font-size:11.5px;letter-spacing:1.6px;color:var(--faint);padding:2px 4px 0;display:flex;justify-content:space-between;align-items:center}
+.side-title .cnt{color:var(--amber2)}
+#players{display:flex;flex-direction:column;gap:8px}
+.pcard{position:relative;padding:9px 12px 12px;border-radius:12px;background:linear-gradient(180deg,#131A2B,#0E1420);border:1px solid var(--line);transition:border-color .25s,opacity .3s;overflow:hidden}
+.pcard .row{display:flex;align-items:center;gap:9px}
+.pava{width:34px;height:34px;flex:none;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;border:1.5px solid}
+.pname{font-weight:800;font-size:13px;display:flex;align-items:center;gap:5px;min-width:0}
+.pname .txt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.you-tag{font-size:8.5px;font-family:var(--disp);letter-spacing:1px;color:#201405;background:var(--amber2);padding:2px 5px;border-radius:5px;flex:none}
+.crown{font-size:12px;flex:none}
+.pstatus{font-size:10.5px;color:var(--dim);margin-top:1px}
+.pscore{margin-left:auto;font-family:var(--mono);font-weight:700;font-size:14px;color:var(--amber2);text-align:right;flex:none}
+.pscore small{display:block;font-size:8px;color:var(--faint);font-family:var(--body);letter-spacing:1px}
+.pbar{height:4px;background:var(--bg0);border-radius:3px;margin-top:8px;overflow:hidden}
+.pbar-fill{height:100%;width:0%;border-radius:3px;background:linear-gradient(90deg,#8B5CF6,#38BDF8);transition:width .25s;box-shadow:0 0 8px rgba(139,92,246,.6)}
+.pmeta{display:flex;align-items:center;gap:8px;margin-top:6px;font-family:var(--mono);font-size:10px;color:var(--faint)}
+.mpips{display:flex;gap:3px;margin-left:auto}
+.mpip{width:7px;height:7px;border-radius:50%;border:1px solid var(--faint)}
+.mpip.on{background:var(--red);border-color:var(--red2);box-shadow:0 0 6px rgba(229,72,77,.8)}
+.pcard.finished{border-color:rgba(52,211,153,.5)}
+.pcard.finished .pbar-fill{background:linear-gradient(90deg,#34D399,#6EE7B7)}
+.pcard.spinning{border-color:var(--amber);animation:spinGlow 1s ease-in-out infinite}
+@keyframes spinGlow{0%,100%{box-shadow:0 0 6px rgba(232,163,61,.25)}50%{box-shadow:0 0 22px rgba(232,163,61,.65)}}
+.pcard.dead{opacity:.45;filter:grayscale(.8)}
+.pcard.dead .pname .txt{text-decoration:line-through}
+.pcard.down{border-style:dashed;opacity:.6}
+.pcard.spect{opacity:.7}
+.mini-rot{display:inline-block;width:13px;height:13px;vertical-align:-2px;animation:rotFast .5s linear infinite}
+@keyframes rotFast{to{transform:rotate(360deg)}}
+#feed-panel{flex:1;min-height:0;display:flex;flex-direction:column;padding:12px 12px 8px}
+#feed{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin-top:8px;padding-right:4px}
+.fe{display:flex;gap:8px;align-items:flex-start;font-size:11.5px;line-height:1.45;color:var(--dim);padding:6px 9px;border-radius:8px;background:rgba(255,255,255,.02);border-left:3px solid var(--line2);animation:feedIn .3s ease}
+.fe .fi{flex:none;font-size:13px}
+.fe.success{border-left-color:var(--green);color:#B9E8D4}
+.fe.danger{border-left-color:var(--red);color:#F3BEC0}
+.fe.warn{border-left-color:var(--amber);color:#F0D9AE}
+.fe.info{border-left-color:var(--cyan)}
+@keyframes feedIn{from{opacity:0;transform:translateY(-7px)}to{opacity:1;transform:none}}
+
+/* ── оверлеи ── */
+.ov{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(4,6,10,.76);backdrop-filter:blur(7px);padding:18px}
+.ov-panel{width:min(560px,94vw);max-height:88dvh;overflow:auto;padding:28px 26px;text-align:center;position:relative}
+#ov-count .rnd{font-family:var(--disp);font-size:15px;letter-spacing:3px;color:var(--cyan2)}
+#cnt-title{font-family:var(--disp);font-size:clamp(24px,4.5vw,36px);margin:10px 0 6px;color:var(--ink)}
+#cnt-meta{font-family:var(--mono);font-size:13px;color:var(--dim);margin-bottom:18px}
+#cnt-num{font-family:var(--disp);font-size:clamp(72px,14vw,120px);color:var(--amber2);text-shadow:0 0 50px rgba(232,163,61,.6);line-height:1}
+#cnt-num.pop{animation:cntPop .9s cubic-bezier(.2,1.4,.4,1)}
+@keyframes cntPop{0%{transform:scale(1.7);opacity:0}25%{transform:scale(1);opacity:1}90%{opacity:1}100%{opacity:.85}}
+.spin-chip{display:inline-block;font-family:var(--disp);font-size:11px;letter-spacing:2px;padding:6px 14px;border-radius:8px;margin-bottom:12px}
+.spin-chip[data-tone="red"]{color:var(--red2);background:rgba(229,72,77,.14);border:1px solid rgba(229,72,77,.5)}
+.spin-chip[data-tone="amber"]{color:var(--amber2);background:rgba(232,163,61,.12);border:1px solid rgba(232,163,61,.5)}
+#spin-title{font-family:var(--disp);font-size:clamp(19px,3.4vw,26px);margin-bottom:6px}
+#spin-sub{font-size:13px;color:var(--dim);margin-bottom:14px}
+.cyl-stage{position:relative;width:min(320px,72vw);margin:0 auto}
+#cyl-svg{width:100%;display:block;filter:drop-shadow(0 14px 40px rgba(0,0,0,.7))}
+#hammer{position:absolute;top:-13px;left:50%;width:34px;height:44px;margin-left:-17px;transform-origin:50% 88%;transition:transform .18s cubic-bezier(.3,1.5,.5,1);z-index:2}
+#hammer.cock{transform:rotate(-32deg)}
+.landed-ring{animation:landPulse .8s ease-in-out infinite}
+@keyframes landPulse{0%,100%{opacity:1}50%{opacity:.4}}
+.spin-stamp{
+  position:absolute;left:50%;top:44%;transform:translate(-50%,-50%) rotate(-7deg);z-index:5;
+  font-family:var(--disp);font-size:clamp(34px,7vw,52px);letter-spacing:3px;padding:10px 26px;border-radius:12px;border:5px solid;
+  animation:stampIn2 .3s cubic-bezier(.2,2,.4,1);white-space:nowrap;
+}
+@keyframes stampIn2{from{transform:translate(-50%,-50%) rotate(-7deg) scale(2.6);opacity:0}to{transform:translate(-50%,-50%) rotate(-7deg) scale(1);opacity:1}}
+.spin-stamp.live{color:var(--green2);border-color:var(--green);background:rgba(6,18,12,.92);box-shadow:0 0 50px rgba(52,211,153,.55);text-shadow:0 0 20px rgba(52,211,153,.8)}
+.spin-stamp.bang{color:var(--red2);border-color:var(--red);background:rgba(26,6,8,.94);box-shadow:0 0 60px rgba(229,72,77,.7);text-shadow:0 0 20px rgba(229,72,77,.9)}
+#spin-result-sub{margin-top:14px;font-size:14.5px;font-weight:600;min-height:22px;color:var(--dim)}
+#spin-result-sub.live{color:var(--green2)} #spin-result-sub.bang{color:var(--red2)}
+.puff{position:absolute;left:50%;top:38%;width:26px;height:26px;border-radius:50%;background:radial-gradient(circle,rgba(200,205,220,.5),transparent 70%);animation:puff 1.3s ease-out forwards;pointer-events:none}
+@keyframes puff{from{transform:translate(-50%,-50%) scale(.6);opacity:.9}to{transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(3.4);opacity:0}}
+#hole{position:absolute;left:50%;top:44%;width:70px;height:70px;transform:translate(-50%,-50%);z-index:4;pointer-events:none}
+#flash{position:fixed;inset:0;z-index:95;pointer-events:none;opacity:0;background:radial-gradient(circle at 50% 45%,rgba(255,245,220,.95),rgba(255,170,60,.6) 30%,rgba(229,72,77,.25) 60%,transparent 80%)}
+#flash.on{animation:flashBang .55s ease-out}
+@keyframes flashBang{0%{opacity:1}100%{opacity:0}}
+
+/* мини-рулетка для тех, кто продолжает печатать */
+#mini{position:fixed;left:16px;bottom:16px;z-index:55;display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:14px;background:linear-gradient(180deg,#1B2338,#10151F);border:1px solid rgba(232,163,61,.55);box-shadow:0 10px 34px rgba(0,0,0,.6),0 0 24px rgba(232,163,61,.25);animation:feedIn .3s ease;max-width:min(340px,80vw)}
+#mini-cyl{width:52px;height:52px;flex:none}
+#mini-cyl.spin{animation:rotFast .45s linear infinite}
+#mini-text{font-size:12.5px;line-height:1.45;color:var(--dim)}
+#mini-text b{color:var(--amber2);display:block;font-size:13.5px}
+
+/* итоги раунда */
+#ov-summary .ov-panel{width:min(700px,94vw);text-align:left}
+.sum-head{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+#sum-round{font-family:var(--disp);font-size:20px;color:var(--amber2);letter-spacing:1px;flex:1}
+.ring-wrap{position:relative;width:52px;height:52px;flex:none}
+.ring-wrap svg{transform:rotate(-90deg)}
+#sum-secs{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;font-size:15px;color:var(--cyan2)}
+.sum-row{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1.6fr) 64px 64px 64px;gap:8px;align-items:center;padding:9px 10px;border-radius:10px;margin-bottom:6px;background:rgba(255,255,255,.025);border:1px solid var(--line);animation:feedIn .35s ease both}
+.sum-row.hd{background:none;border:none;color:var(--faint);font-size:9.5px;letter-spacing:1.2px;font-weight:700;padding:2px 10px;animation:none}
+.sum-row.dead{opacity:.55}
+.sum-who{display:flex;align-items:center;gap:8px;font-weight:800;font-size:13px;min-width:0}
+.sum-who .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fates{display:flex;gap:5px;flex-wrap:wrap}
+.fate{font-size:9.5px;font-weight:700;padding:3px 7px;border-radius:6px;letter-spacing:.4px;white-space:nowrap}
+.fate.fin{background:rgba(52,211,153,.14);color:var(--green2);border:1px solid rgba(52,211,153,.4)}
+.fate.clk{background:rgba(232,163,61,.13);color:var(--amber2);border:1px solid rgba(232,163,61,.4)}
+.fate.bng{background:rgba(229,72,77,.15);color:var(--red2);border:1px solid rgba(229,72,77,.45)}
+.fate.miss{background:rgba(147,161,188,.1);color:var(--dim);border:1px solid var(--line2)}
+.sum-num{font-family:var(--mono);font-size:12px;color:var(--dim);text-align:right}
+.sum-pts{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--amber2);text-align:right}
+#btn-next{width:100%;margin-top:14px}
+#sum-note{text-align:center;font-size:12px;color:var(--faint);margin-top:10px}
+
+/* финал */
+#ov-over{z-index:65}
+#ov-over .ov-panel{width:min(640px,94vw)}
+#over-emoji{font-size:64px;line-height:1;filter:drop-shadow(0 6px 20px rgba(0,0,0,.6));animation:winFloat 2.6s ease-in-out infinite}
+@keyframes winFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+#over-title{font-family:var(--disp);font-size:clamp(24px,5vw,36px);letter-spacing:2px;margin:12px 0 6px;color:var(--amber2);text-shadow:0 0 40px rgba(232,163,61,.5)}
+#over-title.draw{color:var(--red2);text-shadow:0 0 40px rgba(229,72,77,.5)}
+#over-sub{color:var(--dim);font-size:14px;margin-bottom:18px;line-height:1.5}
+#over-sub b{color:var(--ink)}
+.over-row{display:grid;grid-template-columns:38px minmax(0,1.6fr) 76px minmax(0,1fr);gap:8px;align-items:center;padding:9px 12px;border-radius:10px;margin-bottom:6px;background:rgba(255,255,255,.025);border:1px solid var(--line);text-align:left;animation:feedIn .4s ease both}
+.over-row.win{border-color:rgba(232,163,61,.6);background:rgba(232,163,61,.08);box-shadow:0 0 20px rgba(232,163,61,.2)}
+.over-rank{font-family:var(--disp);font-size:16px;color:var(--faint);text-align:center}
+.over-who{display:flex;align-items:center;gap:8px;font-weight:800;font-size:13.5px;min-width:0}
+.over-who .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.over-score{font-family:var(--mono);font-weight:700;font-size:15px;color:var(--amber2);text-align:right}
+.over-fate{font-size:11px;color:var(--dim);text-align:right}
+#over-stats{font-family:var(--mono);font-size:11.5px;color:var(--faint);margin:14px 0 16px}
+#btn-restart{width:100%}
+#over-note{font-size:12px;color:var(--faint);margin-top:10px}
+#confetti{position:fixed;inset:0;z-index:64;pointer-events:none}
+
+/* сеть / тосты */
+#veil-conn{z-index:98;flex-direction:column;gap:16px;text-align:center}
+#veil-conn .sp{width:46px;height:46px;border-radius:50%;border:4px solid var(--line2);border-top-color:var(--amber);animation:rotFast .8s linear infinite}
+#veil-conn-text{font-size:15px;color:var(--dim);max-width:400px;line-height:1.6}
+#toasts{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:96;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+.toast{padding:11px 18px;border-radius:11px;background:linear-gradient(180deg,#1B2338,#111726);border:1px solid var(--line2);font-size:13px;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,.55);animation:toastIn .3s ease;max-width:88vw;text-align:center}
+.toast.warn{border-color:rgba(232,163,61,.6);color:var(--amber2)}
+.toast.danger{border-color:rgba(229,72,77,.6);color:var(--red2)}
+.toast.success{border-color:rgba(52,211,153,.55);color:var(--green2)}
+@keyframes toastIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.toast.out{opacity:0;transition:opacity .4s}
+
+/* ── адаптив ── */
+@media (max-width:1020px){
+  #scr-lobby{grid-template-columns:1fr;gap:26px}
+  #scr-game{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr) auto;gap:10px;padding:10px}
+  #sidebar{display:contents}
+  .side-title.players-t{display:none}
+  #players{flex-direction:row;overflow-x:auto;padding-bottom:6px;order:-1}
+  .pcard{min-width:190px;flex:none}
+  #feed-panel{max-height:130px}
+  .sum-row{grid-template-columns:minmax(0,1.4fr) minmax(0,1.5fr) 58px 64px}
+  .sum-row .hide-m{display:none}
+}
+@media (max-width:640px){
+  .topbar{padding:0 10px;gap:8px}
+  .logo{font-size:14px}
+  .logo .cs{font-size:10px;padding:2px 6px}
+  .chambers .lbl{display:none}
+  #timer-digits{font-size:19px;min-width:70px}
+  .tb-chip{font-size:10px;padding:4px 8px}
+  .conn span{display:none}
+  #done-stamp{top:64px;right:12px;font-size:12px;padding:8px 12px}
+  .over-row{grid-template-columns:30px minmax(0,1.5fr) 64px}
+  .over-fate{display:none}
+  .arena-head{gap:8px;padding:10px 12px 8px}
+  .stats-row{gap:12px;padding:0 12px 8px}
+  #timer-bar-wrap{margin:0 12px 8px}
+  #code-scroll{margin:0 6px}
+  .arena-foot{padding:7px 12px 10px;gap:8px;font-size:10px}
+}
+@media (prefers-reduced-motion:reduce){
+  .aur,#lobby-cyl,#over-emoji{animation:none!important}
+  #app.shake{animation:none}
+}
+</style>
+</head>
+<body>
+<noscript><p style="padding:30px;font-size:16px">Для игры нужен включённый JavaScript.</p></noscript>
+
+<!-- SVG-библиотека -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <radialGradient id="gMetal" cx="38%" cy="32%" r="80%">
+      <stop offset="0%" stop-color="#4A5670"/><stop offset="55%" stop-color="#232C40"/><stop offset="100%" stop-color="#10151F"/>
+    </radialGradient>
+    <radialGradient id="gChamber" cx="42%" cy="38%" r="75%">
+      <stop offset="0%" stop-color="#1C2434"/><stop offset="72%" stop-color="#070A10"/>
+    </radialGradient>
+    <radialGradient id="gBrass" cx="38%" cy="32%" r="80%">
+      <stop offset="0%" stop-color="#F6C453"/><stop offset="68%" stop-color="#B8860B"/><stop offset="100%" stop-color="#6B4E12"/>
+    </radialGradient>
+    <symbol id="sym-cyl" viewBox="0 0 320 320">
+      <circle cx="160" cy="160" r="150" fill="url(#gMetal)" stroke="#3A4A6B" stroke-width="3"/>
+      <circle cx="160" cy="160" r="121" fill="none" stroke="#E8A33D" stroke-opacity=".16" stroke-width="1.5" stroke-dasharray="4 7"/>
+      <g id="sym-chambers"></g>
+      <circle cx="160" cy="160" r="31" fill="url(#gBrass)" stroke="#7A5A1C" stroke-width="2.5"/>
+      <circle cx="160" cy="160" r="9" fill="#2A1F0C"/>
+      <g id="sym-screws"></g>
+    </symbol>
+    <symbol id="sym-bullet" viewBox="0 0 60 60">
+      <circle cx="30" cy="30" r="26" fill="url(#gBrass)" stroke="#5C430F" stroke-width="2.5"/>
+      <circle cx="30" cy="30" r="11" fill="#8A6A1F" stroke="#4A360B" stroke-width="2"/>
+      <circle cx="30" cy="30" r="4.5" fill="#3A2B08"/>
+    </symbol>
+    <symbol id="sym-hammer" viewBox="0 0 34 44">
+      <path d="M17 44 L10 26 L10 12 Q10 4 17 4 Q24 4 24 12 L24 26 Z" fill="url(#gMetal)" stroke="#4A5C82" stroke-width="2"/>
+      <rect x="12" y="1" width="10" height="7" rx="2" fill="#E8A33D"/>
+    </symbol>
+    <symbol id="sym-pip" viewBox="0 0 15 22">
+      <path d="M7.5 1 C10.5 4 12 7 12 10 L12 19 Q12 21 10 21 L5 21 Q3 21 3 19 L3 10 C3 7 4.5 4 7.5 1 Z"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="bg"><div class="aur a"></div><div class="aur b"></div><div class="aur c"></div></div>
+<div class="vign"></div><div class="grain"></div>
+<div id="flash"></div>
+<canvas id="confetti"></canvas>
+
+<div id="app">
+  <header class="topbar">
+    <div class="logo"><span class="cs">C#</span><span>КОД·<span class="r">РУЛЕТКА</span></span></div>
+    <div class="tb-chip" id="tb-round">ЛОББИ</div>
+    <div class="tb-chip ide hidden" id="tb-ide">⌨ IDE</div>
+    <div class="tb-chip mode hidden" id="tb-mode">🔥 ХАРДКОР</div>
+    <div class="chambers" id="tb-chambers"><span class="lbl">БАРАБАН</span></div>
+    <div id="timer-wrap" class="hidden"><span id="timer-digits">0.0</span><span class="sec">сек</span></div>
+    <div class="conn" style="margin-left:auto"><span id="conn-dot"></span><span id="conn-text">СЕТЬ</span></div>
+    <button class="icon-btn" id="btn-sound" title="Звук вкл/выкл" aria-pressed="true">🔊<span class="st"></span></button>
+  </header>
+
+  <!-- ЛОББИ -->
+  <main id="scr-lobby">
+    <section class="hero-left">
+      <h1 class="hero-title">КОД·<span class="amber">РУЛЕТКА</span></h1>
+      <p class="hero-sub">Печатай <b>C#</b> на скорость и точность. Три ошибки или просроченный таймер — и ты крутишь барабан. <b>Один патрон из шести.</b> Последний выживший забирает стол.</p>
+      <div id="cyl-wrap">
+        <svg id="lobby-cyl" viewBox="0 0 320 320"><use href="#sym-cyl"/></svg>
+        <div id="seats"></div>
+        <div id="hub">
+          <div id="hub-title">0/6</div>
+          <div id="hub-sub">ЖДЁМ ИГРОКОВ</div>
+          <button class="btn hidden" id="btn-start">СТАРТ ▸</button>
+        </div>
+      </div>
+      <div class="opt-row">
+        <button class="switch ide on" id="ide-toggle" role="switch" aria-checked="true" title="Автозакрытие скобок и кавычек, как в IDE"></button>
+        <span><b style="color:var(--violet2)">IDE-СКОБКИ</b> — ( ) [ ] { } " " закрываются сами</span>
+      </div>
+      <div class="opt-row">
+        <button class="switch" id="hard-toggle" role="switch" aria-checked="false" title="Хардкор: меньше времени, второй патрон раньше"></button>
+        <span><b style="color:var(--red2)">ХАРДКОР</b> — меньше времени, барабан злее</span>
+      </div>
+    </section>
+    <section class="hero-right">
+      <div class="panel card-pad" id="join-card">
+        <div class="card-title">🪑 ЗАНЯТЬ МЕСТО</div>
+        <input id="inp-name" maxlength="16" placeholder="Твоё имя (например, Артём)" autocomplete="off" spellcheck="false">
+        <div id="avatars"></div>
+        <button class="btn" id="btn-join">СЕСТЬ ЗА СТОЛ</button>
+        <div id="join-note">До 6 игроков. Опоздавшие смотрят как наблюдатели и вступают в следующей партии.</div>
+      </div>
+      <div class="panel card-pad hidden" id="you-card">
+        <div style="display:flex;align-items:center;gap:14px;width:100%">
+          <div id="you-ava">👾</div>
+          <div style="min-width:0"><div id="you-name">—</div><div id="you-role">—</div></div>
+          <button class="btn ghost" id="btn-leave">ВЫЙТИ</button>
+        </div>
+      </div>
+      <div class="panel card-pad">
+        <div class="card-title">📡 АДРЕС ДЛЯ ОДНОГРУППЦЕВ</div>
+        <div id="urls"></div>
+        <div class="url-hint">Все должны быть в одной сети (Wi-Fi / LAN). Игра живёт, пока у хоста запущен <b style="font-family:var(--mono)">node server.js</b>. Не заходит — проверь брандмауэр.</div>
+      </div>
+      <div class="panel card-pad">
+        <div class="card-title">📜 ПРАВИЛА СТОЛА</div>
+        <div class="rules">
+          <div class="rule"><div class="ic v">⌨️</div><div><h4>Один блок кода на всех</h4><p>Каждый раунд — новый сниппет C#, одинаковый для всех. Отступы и закрывающие скобки/кавычки подставляются сами, как в IDE. Копипаста отключена.</p></div></div>
+          <div class="rule"><div class="ic a">🎰</div><div><h4>3 ошибки = барабан</h4><p>Каждая третья опечатка — русская рулетка прямо посреди раунда. Осечка — продолжаешь печатать и получаешь +150.</p></div></div>
+          <div class="rule"><div class="ic c">⏱️</div><div><h4>Не успел — тоже крутишь</h4><p>Таймер истёк, а код не дописан? Барабан. Дописал вовремя — неуязвим до конца раунда. Скорость даёт очки.</p></div></div>
+          <div class="rule"><div class="ic r">💀</div><div><h4>Пуля = выбывание</h4><p>1 патрон в 6 каморах; с поздних раундов патронов больше. Побеждает последний выживший (+500).</p></div></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ИГРА -->
+  <main id="scr-game" class="hidden">
+    <section id="arena" class="panel">
+      <div class="arena-head">
+        <span id="snip-title">—</span>
+        <span id="snip-meta">—</span>
+        <div id="pips"><span class="plbl">ОШИБКИ</span></div>
+      </div>
+      <div class="stats-row">
+        <span id="st-cpm"><span class="s-lbl">ЗН/МИН</span><b>0</b></span>
+        <span id="st-acc"><span class="s-lbl">ТОЧНОСТЬ</span><b>100%</b></span>
+        <span id="st-prog"><span class="s-lbl">ПРОГРЕСС</span><b>0%</b></span>
+      </div>
+      <div id="timer-bar-wrap"><div id="timer-bar"></div></div>
+      <div id="arena-banner" class="hidden"></div>
+      <div id="code-scroll"><div id="code-inner"></div>
+        <div id="focus-veil" class="hidden"><div class="big">⌨️ КЛИКНИ СЮДА И ПЕЧАТАЙ</div><div class="sm">символ в символ · скобки и кавычки закрываются сами · Enter = ↵</div></div>
+      </div>
+      <div class="arena-foot"><span id="ide-hint"><b>⌨ IDE</b> закрывающие скобки печатаются сами</span><span><b>3 ошибки</b> → 🎰 барабан</span><span><b>таймер</b> → 🎰 барабан</span><span><b>дописал</b> → 🛡 защита</span><span><b>осечка</b> → +150</span></div>
+      <div id="done-stamp" class="hidden">✓ КОД ПРИНЯТ<small id="done-sub">—</small></div>
+      <textarea id="kbd" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" aria-label="Поле ввода кода"></textarea>
+    </section>
+    <aside id="sidebar">
+      <div class="side-title players-t"><span>ЗА СТОЛОМ</span><span class="cnt" id="alive-cnt">0/0</span></div>
+      <div id="players"></div>
+      <div class="panel" id="feed-panel">
+        <div class="side-title"><span>ЛЕНТА СТОЛА</span><span>📻</span></div>
+        <div id="feed"></div>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<!-- ОТСЧЁТ -->
+<div class="ov hidden" id="ov-count"><div class="ov-panel panel">
+  <div class="rnd" id="cnt-round">РАУНД 1</div>
+  <div id="cnt-title">—</div>
+  <div id="cnt-meta">—</div>
+  <div id="cnt-num">3</div>
+</div></div>
+
+<!-- РУЛЕТКА -->
+<div class="ov hidden" id="ov-spin"><div class="ov-panel panel">
+  <span class="spin-chip" id="spin-chip" data-tone="red">ТРИ ОШИБКИ</span>
+  <div id="spin-title">Барабан крутится…</div>
+  <div id="spin-sub">1 патрон из 6</div>
+  <div class="cyl-stage">
+    <svg id="hammer" viewBox="0 0 34 44"><use href="#sym-hammer"/></svg>
+    <svg id="cyl-svg" viewBox="0 0 320 320">
+      <g id="cyl-rot"><use href="#sym-cyl"/><g id="cyl-reveal"></g></g>
+    </svg>
+    <div id="spin-fx"></div>
+    <svg id="hole" class="hidden" viewBox="0 0 70 70">
+      <path d="M35 8 L42 22 L58 18 L48 32 L62 42 L45 44 L46 62 L35 48 L24 62 L25 44 L8 42 L22 32 L12 18 L28 22 Z" fill="#05060A" stroke="#3A4152" stroke-width="2"/>
+      <circle cx="35" cy="35" r="9" fill="#000"/>
+    </svg>
+    <div class="spin-stamp hidden" id="spin-stamp">ЩЁЛК!</div>
+  </div>
+  <div id="spin-result-sub"></div>
+</div></div>
+
+<!-- МИНИ-РУЛЕТКА -->
+<div id="mini" class="hidden">
+  <svg id="mini-cyl" viewBox="0 0 320 320"><use href="#sym-cyl"/></svg>
+  <div id="mini-text"><b>—</b><span>крутит барабан…</span></div>
+</div>
+
+<!-- ИТОГИ -->
+<div class="ov hidden" id="ov-summary"><div class="ov-panel panel">
+  <div class="sum-head">
+    <div id="sum-round">ИТОГИ РАУНДА</div>
+    <div class="ring-wrap">
+      <svg width="52" height="52" viewBox="0 0 52 52">
+        <circle cx="26" cy="26" r="21" fill="none" stroke="#243049" stroke-width="5"/>
+        <circle id="sum-ring-fg" cx="26" cy="26" r="21" fill="none" stroke="#38BDF8" stroke-width="5" stroke-linecap="round" stroke-dasharray="131.9" stroke-dashoffset="0"/>
+      </svg>
+      <div id="sum-secs">10</div>
+    </div>
+  </div>
+  <div class="sum-row hd"><span>ИГРОК</span><span>СУДЬБА</span><span class="sum-num">ВРЕМЯ</span><span class="sum-num hide-m">ЗН/МИН</span><span class="sum-num">ОЧКИ</span></div>
+  <div id="sum-rows"></div>
+  <button class="btn hidden" id="btn-next">СЛЕДУЮЩИЙ РАУНД ▸</button>
+  <div id="sum-note">Следующий блок кода начнётся автоматически</div>
+</div></div>
+
+<!-- ФИНАЛ -->
+<div class="ov hidden" id="ov-over"><div class="ov-panel panel">
+  <div id="over-emoji">🏆</div>
+  <div id="over-title">ПОСЛЕДНИЙ ВЫЖИВШИЙ</div>
+  <div id="over-sub">—</div>
+  <div id="over-rows"></div>
+  <div id="over-stats">—</div>
+  <button class="btn hidden" id="btn-restart">🔄 НОВАЯ ИГРА</button>
+  <div id="over-note"></div>
+</div></div>
+
+<div class="ov hidden" id="veil-conn">
+  <div class="sp"></div>
+  <div id="veil-conn-text">Связь с сервером потеряна… переподключаемся.</div>
+  <button class="btn violet hidden" id="btn-reload">ПЕРЕЗАГРУЗИТЬ</button>
+</div>
+<div id="toasts"></div>
+
+<script>
+'use strict';
+(function(){
+/* ═══════════ утилиты ═══════════ */
+const $=id=>document.getElementById(id);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const plural=(n,a,b,c)=>{const m=n%100;if(m>=11&&m<=14)return c;const k=n%10;return k===1?a:k>=2&&k<=4?b:c;};
+const fmtS=ms=>(ms/1000).toFixed(1);
+const NS='http://www.w3.org/2000/svg';
+
+const E={};
+['tb-round','tb-ide','tb-mode','tb-chambers','timer-wrap','timer-digits','conn-dot','conn-text','btn-sound',
+ 'scr-lobby','scr-game','seats','hub-title','hub-sub','btn-start','ide-toggle','hard-toggle','join-card','inp-name','avatars',
+ 'btn-join','join-note','you-card','you-ava','you-name','you-role','btn-leave','urls',
+ 'arena','snip-title','snip-meta','pips','st-cpm','st-acc','st-prog','timer-bar','arena-banner',
+ 'code-scroll','code-inner','focus-veil','done-stamp','done-sub','kbd','players','alive-cnt','feed','ide-hint',
+ 'ov-count','cnt-round','cnt-title','cnt-meta','cnt-num','ov-spin','spin-chip','spin-title','spin-sub',
+ 'cyl-rot','cyl-reveal','hammer','spin-stamp','spin-result-sub','spin-fx','hole','flash',
+ 'mini','mini-cyl','mini-text','ov-summary','sum-round','sum-rows','sum-ring-fg','sum-secs','btn-next','sum-note',
+ 'ov-over','over-emoji','over-title','over-sub','over-rows','over-stats','btn-restart','over-note',
+ 'veil-conn','veil-conn-text','btn-reload','toasts','confetti','app'
+].forEach(id=>E[id.replace(/-([a-z])/g,(m,c)=>c.toUpperCase())]=$(id));
+
+/* геометрия барабана (совпадает со SVG-символом) */
+const chamberPos=i=>{const a=(i*60-90)*Math.PI/180;return{x:160+95*Math.cos(a),y:160+95*Math.sin(a)};};
+(function buildSymbol(){
+  const g=$('sym-chambers'),s=$('sym-screws');
+  for(let i=0;i<6;i++){
+    const p=chamberPos(i);
+    const c=document.createElementNS(NS,'circle');
+    c.setAttribute('cx',p.x);c.setAttribute('cy',p.y);c.setAttribute('r',40);
+    c.setAttribute('fill','url(#gChamber)');c.setAttribute('stroke','#46587E');c.setAttribute('stroke-width','2.5');
+    g.appendChild(c);
+    const c2=document.createElementNS(NS,'circle');
+    c2.setAttribute('cx',p.x);c2.setAttribute('cy',p.y);c2.setAttribute('r',27);c2.setAttribute('fill','#05070C');
+    g.appendChild(c2);
+    const a=(i*60-60)*Math.PI/180;
+    const sc=document.createElementNS(NS,'circle');
+    sc.setAttribute('cx',160+134*Math.cos(a));sc.setAttribute('cy',160+134*Math.sin(a));sc.setAttribute('r',5);
+    sc.setAttribute('fill','#22304A');sc.setAttribute('stroke','#3A4A6B');sc.setAttribute('stroke-width','1.5');
+    s.appendChild(sc);
+  }
+})();
+
+/* ═══════════ звук (WebAudio, всё синтезируется) ═══════════ */
+const AudioFX={
+  ctx:null,master:null,on:localStorage.getItem('cr_sound')!=='0',
+  ensure(){
+    if(!this.ctx){
+      const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
+      this.ctx=new AC();this.master=this.ctx.createGain();
+      this.master.gain.value=this.on?0.5:0;this.master.connect(this.ctx.destination);
+    }
+    if(this.ctx.state==='suspended')this.ctx.resume();
+  },
+  setOn(v){this.on=v;localStorage.setItem('cr_sound',v?'1':'0');if(this.master)this.master.gain.value=v?0.5:0;},
+  tone(f,dur,type,vol,slide,delay){
+    if(!this.ctx||!this.on)return;
+    type=type||'sine';vol=vol||0.2;slide=slide||0;delay=delay||0;
+    const t=this.ctx.currentTime+delay,o=this.ctx.createOscillator(),g=this.ctx.createGain();
+    o.type=type;o.frequency.setValueAtTime(f,t);
+    if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(30,f+slide),t+dur);
+    g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    o.connect(g);g.connect(this.master);o.start(t);o.stop(t+dur+0.03);
+  },
+  noise(dur,vol,fc,type,delay){
+    if(!this.ctx||!this.on)return;
+    vol=vol||0.3;fc=fc||1200;type=type||'lowpass';delay=delay||0;
+    const t=this.ctx.currentTime+delay,sr=this.ctx.sampleRate,len=Math.max(1,Math.floor(sr*dur));
+    const buf=this.ctx.createBuffer(1,len,sr),d=buf.getChannelData(0);
+    for(let i=0;i<len;i++)d[i]=Math.random()*2-1;
+    const src=this.ctx.createBufferSource();src.buffer=buf;
+    const fl=this.ctx.createBiquadFilter();fl.type=type;fl.frequency.value=fc;
+    const g=this.ctx.createGain();g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    src.connect(fl);fl.connect(g);g.connect(this.master);src.start(t);
+  },
+  key(){this.tone(1400+Math.random()*600,0.028,'square',0.045);},
+  pair(){this.tone(1900,0.03,'triangle',0.06);this.tone(2450,0.045,'triangle',0.05,0,0.045);},
+  over(){this.tone(1150,0.025,'triangle',0.05);},
+  err(){this.tone(165,0.16,'sawtooth',0.22,-70);this.noise(0.08,0.09,600);},
+  ratchet(k){this.noise(0.02,0.13*k,2800,'highpass');},
+  cock(){this.tone(720,0.05,'square',0.16,-320);},
+  empty(){this.noise(0.03,0.3,2400,'highpass');this.tone(660,0.12,'sine',0.17,0,0.1);this.tone(880,0.2,'sine',0.17,0,0.24);},
+  bang(){this.noise(0.5,0.85,900);this.noise(0.12,0.6,4200,'highpass');this.tone(92,0.5,'sine',0.8,-58);this.tone(46,0.6,'triangle',0.55,-16,0.02);},
+  count(){this.tone(880,0.09,'square',0.14);},
+  go(){this.tone(1320,0.16,'square',0.17);},
+  tick(){this.tone(1050,0.03,'square',0.09);},
+  finish(){[523,659,784].forEach((f,i)=>this.tone(f,0.12,'triangle',0.19,0,i*0.07));},
+  join(){this.tone(300,0.1,'sine',0.2,320);},
+  win(){[523,659,784,1046,784,1046].forEach((f,i)=>this.tone(f,0.16,'triangle',0.2,0,i*0.12));},
+  lose(){this.tone(220,0.4,'sawtooth',0.17,-80);this.tone(110,0.6,'sawtooth',0.17,-40,0.15);}
+};
+function renderSoundBtn(){
+  E.btnSound.innerHTML=(AudioFX.on?'🔊':'🔇')+'<span class="st"></span>';
+  E.btnSound.classList.toggle('muted',!AudioFX.on);
+  E.btnSound.setAttribute('aria-pressed',String(AudioFX.on));
+}
+E.btnSound.addEventListener('click',()=>{AudioFX.ensure();AudioFX.setOn(!AudioFX.on);renderSoundBtn();});
+document.addEventListener('pointerdown',()=>AudioFX.ensure(),{once:true});
+renderSoundBtn();
+
+/* ═══════════ состояние клиента ═══════════ */
+const S={
+  ws:null,meId:null,token:null,players:[],hostId:null,phase:'lobby',round:0,hardcore:false,ide:true,
+  snippet:null,limit:0,loaded:1,remaining:0,spinning:null,winnerId:null,stats:{shots:0,clicks:0},
+  chars:[],idx:0,total:0,correct:0,startTs:0,myPts:0,doneLocal:false,ideToasted:false,
+  timer:{ends:0,total:1,raf:0,lastWhole:-1},
+  spin:{active:false,raf:0,closeT:0,hammerT:0,watch:false,ev:null},
+  miniT:0,pending:null,cntT:[],sumRaf:0,reconnT:0,tries:0,intentional:false,urls:[]
+};
+S.token=localStorage.getItem('cr_token');
+if(!S.token){S.token=(crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random().toString(36).slice(2));localStorage.setItem('cr_token',S.token);}
+const me=()=>S.players.find(p=>p.id===S.meId)||null;
+const P=id=>S.players.find(p=>p.id===id)||null;
+const iAmTyping=()=>{const m=me();return S.phase==='round'&&m&&!m.spectator&&!m.dead&&!m.finished&&!m.locked;};
+
+/* ═══════════ соединение ═══════════ */
+function send(o){try{if(S.ws&&S.ws.readyState===1)S.ws.send(JSON.stringify(o));}catch(e){}}
+function connect(){
+  const proto=location.protocol==='https:'?'wss':'ws';
+  const ws=new WebSocket(proto+'://'+location.host);
+  S.ws=ws;
+  ws.onopen=()=>{
+    if(S.ws!==ws)return;
+    S.tries=0;E.connDot.classList.remove('bad');E.connText.textContent='СЕТЬ';
+    E.veilConn.classList.add('hidden');
+    send({t:'hello',token:S.token});
+  };
+  ws.onmessage=ev=>{if(S.ws!==ws)return;let m;try{m=JSON.parse(ev.data);}catch(e){return;}route(m);};
+  ws.onclose=()=>{
+    if(S.ws!==ws||S.intentional)return;
+    E.connDot.classList.add('bad');E.connText.textContent='ОБРЫВ';
+    S.tries++;
+    if(S.tries>=2){E.veilConn.classList.remove('hidden');E.veilConnText.textContent='Связь с сервером потеряна… переподключаемся. Место держится 12 секунд.';}
+    S.reconnT=setTimeout(connect,Math.min(8000,800*Math.pow(1.7,S.tries)));
+  };
+  ws.onerror=()=>{try{ws.close();}catch(e){}};
+}
+E.btnReload.addEventListener('click',()=>location.reload());
+
+function route(m){
+  switch(m.t){
+    case 'welcome':
+      S.meId=m.you?m.you.id:null;S.urls=m.urls||[];
+      renderUrls();renderState(m.state);
+      break;
+    case 'state':renderState(m.state);break;
+    case 'intro':renderState(m.state);runCountdown();break;
+    case 'go':onGo(m.durationMs);break;
+    case 'prog':{const p=P(m.id);if(p){p.pos=m.pos;p.cpm=m.cpm;p.acc=m.acc;updateCard(p);}break;}
+    case 'miss':{const p=P(m.id);if(p){p.mistakes=m.mistakes;updateCard(p);if(p.id===S.meId){renderPips();AudioFX.err();}}}break;
+    case 'queued':{
+      const p=P(m.id);if(p)p.locked=true;
+      if(m.id===S.meId){toast(m.reason==='errors'?'🎰 Три ошибки! Барабан заряжен…':'⏱ Время вышло — барабан…','warn');renderBanner();}
+      renderPlayers();break;}
+    case 'finish':{
+      const p=P(m.id);
+      if(p){p.finished=true;p.finishMs=m.ms;p.cpm=m.cpm;p.acc=m.acc;p.score+=m.pts;}
+      if(m.id===S.meId){S.myPts=m.pts;showDoneStamp(m.ms,m.pts);AudioFX.finish();}
+      else AudioFX.tone(700,0.08,'triangle',0.1);
+      renderPlayers();renderBanner();break;}
+    case 'timeout':onTimeoutEv();break;
+    case 'spin':onSpin(m);break;
+    case 'spinResult':onSpinResult(m);break;
+    case 'summary':openSummary(m.rows,m.nextMs,m.round);break;
+    case 'over':openOver(m);break;
+    case 'feed':addFeed(m.icon,m.text,m.tone);break;
+    case 'kicked':
+      S.intentional=true;
+      E.veilConn.classList.remove('hidden');
+      E.veilConn.querySelector('.sp').style.display='none';
+      E.veilConnText.textContent=m.reason||'Сессия закрыта сервером.';
+      E.btnReload.classList.remove('hidden');
+      break;
+  }
+}
+
+/* ═══════════ полный рендер состояния ═══════════ */
+function renderState(st){
+  if(!st)return;
+  const prevPhase=S.phase;
+  S.phase=st.phase;S.round=st.round;S.hostId=st.hostId;S.hardcore=st.hardcore;S.ide=st.ide!==false;
+  S.players=st.players;S.loaded=st.loaded;S.limit=st.limit;S.winnerId=st.winnerId;S.stats=st.stats||S.stats;
+  if(st.snippet)S.snippet=st.snippet;
+  renderTopbar();
+  if(st.phase==='lobby'){
+    stopTimer();Confetti.stop();cancelSpinAll();hideMini();
+    E.ovCount.classList.add('hidden');E.ovSummary.classList.add('hidden');E.ovOver.classList.add('hidden');E.ovSpin.classList.add('hidden');
+    S.cntT.forEach(clearTimeout);S.cntT=[];S.pending=null;S.ideToasted=false;
+    document.body.classList.remove('in-game');
+    E.scrGame.classList.add('hidden');E.scrLobby.classList.remove('hidden');
+    renderLobby();
+    return;
+  }
+  document.body.classList.add('in-game');
+  E.scrLobby.classList.add('hidden');E.scrGame.classList.remove('hidden');
+  renderPlayers();
+  const m=me();
+  if(st.phase==='countdown'){
+    S.snippet=st.snippet;resetTyping();buildCode(st.snippet.code,0);
+    E.doneStamp.classList.add('hidden');renderBanner();renderPips();
+    stopTimer();E.timerDigits.textContent=st.limit.toFixed(1);E.timerDigits.className='';E.timerBar.style.width='100%';E.timerBar.className='';
+    E.ovSummary.classList.add('hidden');E.ovOver.classList.add('hidden');Confetti.stop();
+    E.ovCount.classList.remove('hidden');
+    E.cntRound.textContent='РАУНД '+st.round;E.cntTitle.textContent='«'+st.snippet.title+'»';
+    E.cntMeta.textContent=st.snippet.code.length+' симв · '+st.limit+' сек · патронов: '+st.loaded+(S.ide?' · IDE-скобки':'');
+    E.cntNum.textContent='…';
+  }
+  else if(st.phase==='round'){
+    S.snippet=st.snippet;
+    const pos=m&&!m.spectator&&!m.dead?m.pos:(st.snippet.code.length);
+    if(!S.chars.length||S.doneLocal||prevPhase!=='round'){resetTyping();buildCode(st.snippet.code,pos);S.idx=pos;S.correct=pos;S.total=pos+(m?m.mistakes:0);S.startTs=performance.now();}
+    E.ovCount.classList.add('hidden');E.ovSummary.classList.add('hidden');E.ovOver.classList.add('hidden');
+    if(m&&m.finished)showDoneStamp(m.finishMs,null);else E.doneStamp.classList.add('hidden');
+    renderPips();renderBanner();updateMyStats();
+    startTimer(st.remainingMs);
+    if(st.spinning){onSpin({...st.spinning},{elapsed:st.spinning.elapsedMs});}
+    tryFocus();
+  }
+  else if(st.phase==='timeout'){
+    E.ovCount.classList.add('hidden');
+    stopTimer();E.timerDigits.textContent='0.0';E.timerDigits.className='crit';E.timerBar.style.width='0%';E.timerBar.className='crit';
+    if(m&&m.finished)showDoneStamp(m.finishMs,null);
+    renderPips();renderBanner();
+    if(st.spinning)onSpin({...st.spinning},{elapsed:st.spinning.elapsedMs});
+  }
+  else if(st.phase==='summary'){
+    stopTimer();E.ovCount.classList.add('hidden');hideMini();
+    if(st.summary)openSummary(st.summary.rows,st.summary.nextMs,st.round);
+  }
+  else if(st.phase==='over'){
+    stopTimer();hideMini();E.ovCount.classList.add('hidden');E.ovSummary.classList.add('hidden');
+    openOver({winnerId:st.winnerId,round:st.round,stats:st.stats,rows:S.players.filter(p=>!p.spectator).map(p=>({id:p.id,name:p.name,avatar:p.avatar,color:p.color,score:p.score,dead:p.dead,deadReason:p.deadReason,deathRound:p.deathRound,survived:p.survived})).sort((a,b)=>b.score-a.score)});
+  }
+}
+
+function renderTopbar(){
+  E.tbRound.textContent=S.phase==='lobby'?'ЛОББИ':S.phase==='over'?'ФИНАЛ':'РАУНД '+S.round;
+  E.tbMode.classList.toggle('hidden',!S.hardcore);
+  E.tbIde.classList.toggle('hidden',!S.ide);
+  E.ideHint.classList.toggle('hidden',!S.ide);
+  E.timerWrap.classList.toggle('hidden',S.phase==='lobby');
+  E.tbChambers.innerHTML='<span class="lbl">БАРАБАН '+S.loaded+'/6</span>';
+  for(let i=0;i<6;i++){const d=document.createElement('span');d.className='chdot'+(i<S.loaded?' on':'');E.tbChambers.appendChild(d);}
+}
+
+/* ═══════════ лобби ═══════════ */
+let selectedAva=localStorage.getItem('cr_ava')||'🦈';
+const AVA_LIST=['🦈','🐺','🦊','🐸','🦉','🐙','👾','🤖'];
+(function buildAvatars(){
+  AVA_LIST.forEach(a=>{
+    const b=document.createElement('button');b.className='ava-btn'+(a===selectedAva?' sel':'');b.textContent=a;b.type='button';
+    b.addEventListener('click',()=>{selectedAva=a;localStorage.setItem('cr_ava',a);[...E.avatars.children].forEach(x=>x.classList.toggle('sel',x.textContent===a));AudioFX.ensure();AudioFX.join();});
+    E.avatars.appendChild(b);
+  });
+  E.inpName.value=localStorage.getItem('cr_name')||'';
+})();
+function renderUrls(){
+  E.urls.innerHTML='';
+  const list=S.urls.length?S.urls:['http://'+location.host];
+  list.forEach(u=>{
+    const row=document.createElement('div');row.className='url-row';
+    const sp=document.createElement('span');sp.className='u';sp.textContent=u;
+    const cp=document.createElement('button');cp.className='copy-btn';cp.textContent='КОПИРОВАТЬ';
+    cp.addEventListener('click',()=>{
+      const done=()=>{cp.textContent='✓ СКОПИРОВАНО';setTimeout(()=>cp.textContent='КОПИРОВАТЬ',1600);};
+      if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(u).then(done,()=>fallbackCopy(u,done));
+      else fallbackCopy(u,done);
+    });
+    row.appendChild(sp);row.appendChild(cp);E.urls.appendChild(row);
+  });
+}
+function fallbackCopy(text,done){
+  const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';
+  document.body.appendChild(ta);ta.select();try{document.execCommand('copy');done();}catch(e){}document.body.removeChild(ta);
+}
+let prevSeatIds='';
+function renderLobby(){
+  const seated=S.players.filter(p=>!p.spectator);
+  const m=me();
+  const seatIds=seated.map(p=>p.id).join(',');
+  const isNew=seatIds!==prevSeatIds;prevSeatIds=seatIds;
+  E.seats.innerHTML='';
+  E.seats.style.cssText='position:absolute;inset:0';
+  for(let i=0;i<6;i++){
+    const a=(i*60-90)*Math.PI/180;
+    const seat=document.createElement('div');
+    seat.style.left=(50+41*Math.cos(a))+'%';seat.style.top=(50+41*Math.sin(a))+'%';
+    const p=seated.find(x=>x.seat===i);
+    if(p){
+      seat.className='seat'+(p.id===S.meId?' me':'')+(p.connected?'':' down')+(isNew?' pop':'');
+      const ava=document.createElement('div');ava.className='ava';ava.textContent=p.avatar;
+      const nm=document.createElement('div');nm.className='nm';nm.textContent=p.name;nm.style.color=p.color;
+      seat.appendChild(ava);seat.appendChild(nm);
+      const tag=document.createElement('div');tag.className='tag';
+      tag.textContent=p.id===S.hostId?'👑 ХОСТ':!p.connected?'СВЯЗЬ…':p.id===S.meId?'ЭТО ТЫ':'ГОТОВ';
+      seat.appendChild(tag);
+      if(m&&m.id===S.hostId&&p.id!==S.meId){
+        const k=document.createElement('button');k.className='kick';k.textContent='✕';k.title='Убрать со стола';
+        k.addEventListener('click',ev=>{ev.stopPropagation();send({t:'kick',id:p.id});});
+        seat.appendChild(k);
+      }
+    }else{
+      seat.className='seat empty';
+      seat.innerHTML='<div class="num">'+(i+1)+'</div><div class="free">СВОБОДНО</div>';
+      seat.addEventListener('click',()=>{E.inpName.focus();});
+    }
+    E.seats.appendChild(seat);
+  }
+  const n=seated.length;
+  const iAmHost=m&&m.id===S.hostId&&!m.spectator;
+  E.hubTitle.textContent=n+'/6';
+  E.btnStart.classList.toggle('hidden',!iAmHost);
+  E.btnStart.disabled=n<1;
+  E.hubSub.textContent=iAmHost?(n===1?'МОЖНО СОЛО-ТРЕНИРОВКА. ЖМИ СТАРТ':'ЖМИ, КОГДА ВСЕ ЗАШЛИ'):(n?'ЖДЁМ, ПОКА ХОСТ НАЧНЁТ':'ЖДЁМ ИГРОКОВ');
+  E.ideToggle.classList.toggle('on',S.ide);
+  E.ideToggle.setAttribute('aria-checked',String(S.ide));
+  E.ideToggle.disabled=!iAmHost;
+  E.hardToggle.classList.toggle('on',S.hardcore);
+  E.hardToggle.setAttribute('aria-checked',String(S.hardcore));
+  E.hardToggle.disabled=!iAmHost;
+  if(m&&!m.spectator){
+    E.joinCard.classList.add('hidden');E.youCard.classList.remove('hidden');
+    E.youAva.textContent=m.avatar;E.youName.textContent=m.name;E.youName.style.color=m.color;
+    E.youRole.textContent=m.id===S.hostId?'Ты хост: собери одногруппцев по адресу ниже и жми СТАРТ в центре барабана.':'Место '+(m.seat+1)+' занято. Жди старта — и разомни пальцы.';
+  }else if(m&&m.spectator){
+    E.joinCard.classList.add('hidden');E.youCard.classList.remove('hidden');
+    E.youAva.textContent=m.avatar;E.youName.textContent=m.name;
+    E.youRole.textContent='Ты наблюдатель. В новой партии вступишь за стол автоматически.';
+  }else{
+    E.joinCard.classList.remove('hidden');E.youCard.classList.add('hidden');
+    E.btnJoin.textContent=S.phase==='lobby'?'СЕСТЬ ЗА СТОЛ':'👁 НАБЛЮДАТЬ';
+    E.joinNote.textContent=S.phase==='lobby'?'До 6 игроков. Опоздавшие смотрят как наблюдатели и вступают в следующей партии.':'Игра уже идёт — зайдёшь наблюдателем, а в следующей партии сядешь за стол.';
+  }
+}
+E.btnJoin.addEventListener('click',()=>{
+  AudioFX.ensure();
+  const name=E.inpName.value.trim();
+  if(!name){toast('Введи имя — стол должен знать героя','warn');E.inpName.focus();return;}
+  localStorage.setItem('cr_name',name);
+  send({t:'join',name,avatar:selectedAva,token:S.token});
+  AudioFX.join();
+});
+E.inpName.addEventListener('keydown',e=>{if(e.key==='Enter')E.btnJoin.click();});
+E.btnLeave.addEventListener('click',()=>{send({t:'leave'});});
+E.btnStart.addEventListener('click',()=>{AudioFX.ensure();send({t:'start'});});
+E.ideToggle.addEventListener('click',()=>{if(!E.ideToggle.disabled){AudioFX.ensure();AudioFX.pair();send({t:'ide',on:!S.ide});}});
+E.hardToggle.addEventListener('click',()=>{if(!E.hardToggle.disabled)send({t:'mode',hardcore:!S.hardcore});});
+
+/* ═══════════ таблица игроков ═══════════ */
+function statusText(p){
+  if(p.spectator)return'наблюдает';
+  if(p.dead)return p.deadReason==='left'?'сбежал 🏳':'выбыл · раунд '+(p.deathRound||S.round);
+  if(!p.connected)return'связь потеряна…';
+  if(p.spinning)return'КРУТИТ БАРАБАН';
+  if(p.locked)return'ждёт барабан…';
+  if(p.finished)return'✓ дописал за '+fmtS(p.finishMs)+'с';
+  if(S.phase==='round'&&S.snippet)return'печатает… '+Math.round(p.pos/S.snippet.code.length*100)+'%';
+  if(S.phase==='timeout')return'не успел ⏱';
+  return'за столом';
+}
+function renderPlayers(){
+  const list=S.players.filter(p=>!p.spectator).concat(S.players.filter(p=>p.spectator));
+  E.aliveCnt.textContent=S.players.filter(p=>!p.spectator&&!p.dead).length+'/'+S.players.filter(p=>!p.spectator).length;
+  E.players.innerHTML='';
+  list.forEach(p=>{
+    const c=document.createElement('div');
+    c.className='pcard'+(p.dead?' dead':'')+(p.finished&&!p.dead?' finished':'')+(p.spinning?' spinning':'')+(!p.connected?' down':'')+(p.spectator?' spect':'');
+    c.dataset.pid=p.id;
+    const row=document.createElement('div');row.className='row';
+    const av=document.createElement('div');av.className='pava';av.textContent=p.dead?'💀':p.avatar;
+    av.style.borderColor=p.color;av.style.background=p.color+'22';
+    const mid=document.createElement('div');mid.style.minWidth='0';
+    const nm=document.createElement('div');nm.className='pname';
+    const tx=document.createElement('span');tx.className='txt';tx.textContent=p.name;nm.appendChild(tx);
+    if(p.isHost){const cr=document.createElement('span');cr.className='crown';cr.textContent='👑';nm.appendChild(cr);}
+    if(p.id===S.meId){const yt=document.createElement('span');yt.className='you-tag';yt.textContent='ТЫ';nm.appendChild(yt);}
+    const st=document.createElement('div');st.className='pstatus';
+    if(p.spinning){const r=document.createElement('span');r.className='mini-rot';r.textContent='🎰';st.appendChild(r);st.appendChild(document.createTextNode(' '+statusText(p)));}
+    else st.textContent=statusText(p);
+    mid.appendChild(nm);mid.appendChild(st);
+    const sc=document.createElement('div');sc.className='pscore';sc.textContent=p.score;
+    const sm=document.createElement('small');sm.textContent='ОЧКОВ';sc.appendChild(sm);
+    row.appendChild(av);row.appendChild(mid);row.appendChild(sc);
+    const bar=document.createElement('div');bar.className='pbar';
+    const fill=document.createElement('div');fill.className='pbar-fill';
+    fill.style.width=(S.snippet&&!p.spectator?clamp(p.pos/S.snippet.code.length*100,0,100):0)+'%';
+    bar.appendChild(fill);
+    const meta=document.createElement('div');meta.className='pmeta';
+    const cpm=document.createElement('span');cpm.textContent=p.cpm+' зн/мин';
+    const acc=document.createElement('span');acc.textContent=p.acc+'%';
+    const mp=document.createElement('div');mp.className='mpips';
+    for(let i=0;i<3;i++){const d=document.createElement('span');d.className='mpip'+(i<p.mistakes?' on':'');mp.appendChild(d);}
+    meta.appendChild(cpm);meta.appendChild(acc);meta.appendChild(mp);
+    c.appendChild(row);c.appendChild(bar);c.appendChild(meta);
+    E.players.appendChild(c);
+  });
+}
+function updateCard(p){
+  const c=E.players.querySelector('[data-pid="'+p.id+'"]');
+  if(!c){renderPlayers();return;}
+  const fill=c.querySelector('.pbar-fill');
+  if(fill&&S.snippet)fill.style.width=clamp(p.pos/S.snippet.code.length*100,0,100)+'%';
+  const meta=c.querySelectorAll('.pmeta > span');
+  if(meta[0])meta[0].textContent=p.cpm+' зн/мин';
+  if(meta[1])meta[1].textContent=p.acc+'%';
+  c.querySelectorAll('.mpip').forEach((d,i)=>d.classList.toggle('on',i<p.mistakes));
+  const st=c.querySelector('.pstatus');if(st&&!p.spinning)st.textContent=statusText(p);
+}
+function renderPips(){
+  const m=me();const n=m?m.mistakes:0;
+  E.pips.innerHTML='<span class="plbl">ОШИБКИ</span>';
+  for(let i=0;i<3;i++){
+    const s=document.createElementNS(NS,'svg');s.setAttribute('viewBox','0 0 15 22');s.setAttribute('class','pip'+(i<n?' full':''));
+    const u=document.createElementNS(NS,'use');u.setAttribute('href','#sym-pip');s.appendChild(u);
+    E.pips.appendChild(s);
+  }
+  E.pips.classList.toggle('hot',n===2);
+}
+
+/* ═══════════ набор кода + IDE-автозакрытие ═══════════ */
+const KW=new Set(['using','namespace','class','static','void','int','string','var','new','return','if','else','for','foreach','in','while','switch','try','catch','finally','async','await','public','private','protected','record','interface','enum','struct','event','yield','get','set','with','is','not','null','true','false','this','base','out','ref','params','readonly','const','sealed','override','virtual','abstract','internal','double','float','bool','char','decimal','long','short','byte','object','dynamic','throw','do','break','continue','case','default','lock','typeof','nameof','when']);
+const PAIRS={'(':')','[':']','{':'}','"':'"'};
+const CLOSERS=new Set([')',']','}','"']);
+function tokenize(src){
+  const out=[];let i=0;
+  const push=(ch,cls)=>out.push({ch,cls});
+  while(i<src.length){
+    const c=src[i];
+    if(c==='\n'||c===' '){push(c,'w');i++;continue;}
+    if(c==='/'&&src[i+1]==='/'){while(i<src.length&&src[i]!=='\n'){push(src[i],'c');i++;}continue;}
+    if(c==='"'||(c==='$'&&src[i+1]==='"')){
+      if(c==='$'){push('$','s');i++;}
+      push('"','s');i++;
+      while(i<src.length&&src[i]!=='"'&&src[i]!=='\n'){push(src[i],'s');i++;}
+      if(src[i]==='"'){push('"','s');i++;}
+      continue;
+    }
+    if(/[A-Za-z_]/.test(c)){
+      let j=i;while(j<src.length&&/[A-Za-z0-9_]/.test(src[j]))j++;
+      const w=src.slice(i,j);let cls='i';
+      if(KW.has(w))cls='k';
+      else if(/^[A-Z]/.test(w))cls='t';
+      else{let k=j;while(src[k]===' ')k++;if(src[k]==='(')cls='f';}
+      for(const ch of w)push(ch,cls);
+      i=j;continue;
+    }
+    if(/[0-9]/.test(c)){let j=i;while(j<src.length&&/[0-9.]/.test(src[j]))j++;for(const ch of src.slice(i,j))push(ch,'n');i=j;continue;}
+    push(c,'p');i++;
+  }
+  return out;
+}
+function resetTyping(){S.chars=[];S.idx=0;S.total=0;S.correct=0;S.doneLocal=false;S.myPts=0;E.codeInner.innerHTML='';}
+function buildCode(src,startIdx){
+  E.codeInner.innerHTML='';S.chars=[];
+  const toks=tokenize(src);
+  let line=document.createElement('div');line.className='cl';
+  let ln=document.createElement('span');ln.className='ln';ln.textContent='1';line.appendChild(ln);
+  let lt=document.createElement('span');lt.className='lt';line.appendChild(lt);
+  E.codeInner.appendChild(line);
+  let lineNo=1;
+  toks.forEach(t=>{
+    const sp=document.createElement('span');
+    sp.className='ch tk-'+t.cls;
+    sp.textContent=t.ch==='\n'?'↵':t.ch;
+    lt.appendChild(sp);
+    S.chars.push({ch:t.ch,el:sp,line,auto:false,ghost:false,overUsed:false});
+    if(t.ch==='\n'){
+      line=document.createElement('div');line.className='cl';lineNo++;
+      ln=document.createElement('span');ln.className='ln';ln.textContent=String(lineNo);line.appendChild(ln);
+      lt=document.createElement('span');lt.className='lt';line.appendChild(lt);
+      E.codeInner.appendChild(line);
+    }
+  });
+  startIdx=clamp(startIdx,0,S.chars.length);
+  for(let i=0;i<startIdx;i++){
+    const c=S.chars[i];c.el.classList.add('ok');
+    const indent=c.ch===' '&&i>0&&S.chars[i-1].ch==='\n';
+    if(indent||(S.ide&&CLOSERS.has(c.ch))){c.auto=true;c.el.classList.add('auto');}
+  }
+  if(S.ide){
+    for(let i=0;i<startIdx;i++){
+      if(PAIRS[S.chars[i].ch]!==undefined){
+        const j=findMatch(i);
+        if(j>=startIdx&&!S.chars[j].ghost){S.chars[j].ghost=true;S.chars[j].el.classList.add('ghost');}
+      }
+    }
+  }
+  S.idx=startIdx;
+  if(S.idx<S.chars.length){S.chars[S.idx].el.classList.add('cur');S.chars[S.idx].line.classList.add('active');}
+  ensureVisible();
+}
+/* найти парный закрывающий символ в целевом тексте */
+function findMatch(i){
+  const open=S.chars[i].ch,close=PAIRS[open];
+  if(!close)return -1;
+  if(open==='"'){
+    for(let j=i+1;j<S.chars.length;j++){
+      if(S.chars[j].ch==='\n')return -1;
+      if(S.chars[j].ch==='"')return j;
+    }
+    return -1;
+  }
+  let depth=0;
+  for(let j=i+1;j<S.chars.length;j++){
+    const c=S.chars[j].ch;
+    if(c===open)depth++;
+    else if(c===close){if(depth===0)return j;depth--;}
+  }
+  return -1;
+}
+function ensureVisible(){
+  const c=S.chars[S.idx];if(!c)return;
+  const wrap=E.codeScroll,ln=c.line;
+  const top=ln.offsetTop,bot=top+ln.offsetHeight;
+  if(top<wrap.scrollTop+8)wrap.scrollTop=Math.max(0,top-8);
+  else if(bot>wrap.scrollTop+wrap.clientHeight-14)wrap.scrollTop=bot-wrap.clientHeight+14;
+  const left=c.el.offsetLeft,right=left+c.el.offsetWidth+30;
+  if(left<wrap.scrollLeft+40)wrap.scrollLeft=Math.max(0,left-40);
+  else if(right>wrap.scrollLeft+wrap.clientWidth)wrap.scrollLeft=right-wrap.clientWidth;
+}
+/* пропустить авто-символы: отступы после ↵ и подставленные закрывающие */
+function skipAuto(afterNl){
+  while(S.idx<S.chars.length){
+    const t=S.chars[S.idx];
+    const indent=afterNl&&t.ch===' ';
+    if(t.ghost||indent){
+      t.ghost=false;t.auto=true;
+      t.el.classList.remove('ghost','cur');
+      t.el.classList.add('ok','auto');
+      S.idx++;
+      continue;
+    }
+    break;
+  }
+}
+function advance(){
+  const at=S.idx;
+  const c=S.chars[at];
+  c.el.classList.remove('cur');c.el.classList.add('ok');
+  const wasNl=c.ch==='\n';
+  if(wasNl)c.line.classList.remove('active');
+  /* IDE: печатаешь открывающую — закрывающая появляется сама */
+  if(S.ide&&PAIRS[c.ch]!==undefined){
+    const j=findMatch(at);
+    if(j>at){
+      const t=S.chars[j];
+      if(!t.auto&&!t.ghost){
+        t.ghost=true;t.el.classList.add('ghost');
+        t.el.classList.remove('ghost-pop');void t.el.offsetWidth;t.el.classList.add('ghost-pop');
+        AudioFX.pair();
+      }
+    }
+  }
+  S.idx++;
+  skipAuto(wasNl);
+  if(S.idx<S.chars.length){
+    S.chars[S.idx].el.classList.add('cur');
+    S.chars[S.idx].line.classList.add('active');
+  }
+  ensureVisible();updateMyStats();queueProg();
+}
+/* IDE type-over: привычно нажал закрывающую, которая уже подставлена — не ошибка */
+function tryTypeOver(ch){
+  for(let k=S.idx-1;k>=0;k--){
+    const t=S.chars[k];
+    if(!(t.auto&&CLOSERS.has(t.ch)))break;
+    if(t.ch===ch&&!t.overUsed){
+      t.overUsed=true;S.total++;S.correct++;
+      AudioFX.over();
+      t.el.classList.remove('over-flash');void t.el.offsetWidth;t.el.classList.add('over-flash');
+      updateMyStats();queueProg();
+      return true;
+    }
+  }
+  return false;
+}
+function processChar(ch){
+  if(!iAmTyping()||S.idx>=S.chars.length)return;
+  AudioFX.ensure();
+  const expected=S.chars[S.idx].ch;
+  if(ch===expected){
+    S.total++;S.correct++;AudioFX.key();advance();
+    if(S.idx>=S.chars.length)doFinish();
+  }else if(S.ide&&CLOSERS.has(ch)&&tryTypeOver(ch)){
+    /* курсор уже за подставленной скобкой — просто «перешагнули» её */
+  }else{
+    S.total++;
+    AudioFX.err();
+    send({t:'miss'});
+    const el=S.chars[S.idx].el;
+    el.classList.add('bad');setTimeout(()=>el.classList.remove('bad'),170);
+    E.codeInner.classList.remove('jolt');void E.codeInner.offsetWidth;E.codeInner.classList.add('jolt');
+    updateMyStats();
+  }
+}
+function doFinish(){
+  S.doneLocal=true;
+  const el=(performance.now()-S.startTs)/1000;
+  const cpm=el>0.5?Math.round(S.idx/(el/60)):0;
+  const acc=S.total?Math.round(S.correct/S.total*100):100;
+  send({t:'finish',cpm,acc});
+  sendProgNow();
+  E.kbd.blur();renderBanner();
+}
+function showDoneStamp(ms,pts){
+  E.doneStamp.classList.remove('hidden');
+  E.doneSub.textContent=fmtS(ms)+'с'+(pts!=null?' · +'+pts+' очк':'')+' · жди остальных';
+}
+function updateMyStats(){
+  const el=(performance.now()-S.startTs)/1000;
+  const cpm=S.startTs&&el>1?Math.round(S.idx/(el/60)):0;
+  const acc=S.total?Math.round(S.correct/S.total*100):100;
+  const prog=S.chars.length?Math.round(S.idx/S.chars.length*100):0;
+  E.stCpm.querySelector('b').textContent=cpm;
+  E.stAcc.querySelector('b').textContent=acc+'%';
+  E.stProg.querySelector('b').textContent=prog+'%';
+}
+let lastProg=0,progT=null;
+function sendProgNow(){
+  const el=(performance.now()-S.startTs)/1000;
+  send({t:'progress',pos:S.idx,cpm:el>0.5?Math.round(S.idx/(el/60)):0,acc:S.total?Math.round(S.correct/S.total*100):100});
+}
+function queueProg(){
+  const now=Date.now();
+  if(now-lastProg>220){lastProg=now;sendProgNow();}
+  else if(!progT){progT=setTimeout(()=>{progT=null;lastProg=Date.now();sendProgNow();},230);}
+}
+
+/* ввод: скрытая textarea (desktop + мобильная клавиатура) */
+E.kbd.addEventListener('beforeinput',e=>{
+  if(e.inputType==='insertText'&&e.data){e.preventDefault();for(const ch of e.data)processChar(ch);return;}
+  if(e.inputType==='insertLineBreak'||e.inputType==='insertParagraph'){e.preventDefault();processChar('\n');return;}
+  if(e.inputType&&e.inputType.startsWith('delete')){e.preventDefault();return;}
+  if(e.inputType==='insertFromPaste'){e.preventDefault();toast('Без копипасты 😉 Печатай сам','warn');return;}
+});
+E.kbd.addEventListener('input',()=>{
+  if(E.kbd.value){const v=E.kbd.value;E.kbd.value='';for(const ch of v)processChar(ch==='\r'?'':ch);}
+});
+E.kbd.addEventListener('keydown',e=>{
+  if(e.key==='Tab'||e.key==='Backspace')e.preventDefault();
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='v'){e.preventDefault();toast('Без копипасты 😉','warn');}
+});
+E.kbd.addEventListener('paste',e=>{e.preventDefault();toast('Без копипасты 😉 Печатай сам','warn');});
+E.kbd.addEventListener('focus',renderFocusVeil);
+E.kbd.addEventListener('blur',()=>setTimeout(renderFocusVeil,60));
+E.focusVeil.addEventListener('click',()=>{AudioFX.ensure();tryFocus();});
+E.codeScroll.addEventListener('click',()=>{if(iAmTyping())tryFocus();});
+E.codeScroll.addEventListener('drop',e=>e.preventDefault());
+function tryFocus(){if(iAmTyping()){try{E.kbd.focus({preventScroll:true});}catch(e){E.kbd.focus();}}renderFocusVeil();}
+function renderFocusVeil(){
+  const show=iAmTyping()&&document.activeElement!==E.kbd&&!S.spin.active;
+  E.focusVeil.classList.toggle('hidden',!show);
+}
+function renderBanner(){
+  const m=me();let cls='',txt='';
+  if(m&&m.spectator){cls='info';txt='👁 Ты наблюдатель. В новой партии вступишь за стол автоматически.';}
+  else if(m&&m.dead){cls='dead';txt=m.deadReason==='left'?'🏳 Связь оборвалась — засчитано поражение. Наблюдай за столом.':'💀 Ты выбыл в раунде '+(m.deathRound||S.round)+'. Смотри, как догорают другие.';}
+  else if(S.phase==='timeout'&&m&&!m.finished){cls='warn';txt='⏱ Время вышло. Барабан решает судьбы…';}
+  else if(m&&m.locked&&S.phase==='round'){cls='warn';txt='🎰 Три ошибки — жди свою очередь у барабана…';}
+  E.arenaBanner.className=cls||'hidden';
+  if(cls){E.arenaBanner.classList.remove('hidden');E.arenaBanner.textContent=txt;}
+  else E.arenaBanner.classList.add('hidden');
+  E.arena.classList.toggle('dead-view',!!(m&&m.dead));
+  renderFocusVeil();
+}
+
+/* ═══════════ таймер ═══════════ */
+function startTimer(ms){
+  cancelAnimationFrame(S.timer.raf);
+  S.timer.ends=performance.now()+ms;S.timer.total=Math.max(1,ms);S.timer.lastWhole=-1;
+  const step=()=>{
+    const rem=Math.max(0,S.timer.ends-performance.now());
+    const s=rem/1000;
+    E.timerDigits.textContent=s>=60?Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0'):s.toFixed(1);
+    const frac=rem/S.timer.total;
+    E.timerBar.style.width=(frac*100)+'%';
+    const cls=s<=10?'crit':s<=20?'warn':'';
+    E.timerDigits.className=cls;E.timerBar.className=cls;
+    const whole=Math.ceil(s);
+    if(whole!==S.timer.lastWhole){S.timer.lastWhole=whole;if(whole<=5&&whole>0&&iAmTyping())AudioFX.tick();}
+    if(rem>0&&S.phase==='round')S.timer.raf=requestAnimationFrame(step);
+  };
+  step();
+}
+function stopTimer(){cancelAnimationFrame(S.timer.raf);}
+function onTimeoutEv(){
+  S.phase='timeout';stopTimer();
+  E.timerDigits.textContent='0.0';E.timerDigits.className='crit';
+  E.timerBar.style.width='0%';E.timerBar.className='crit';
+  hideMini();renderPlayers();renderBanner();
+}
+function onGo(durationMs){
+  S.phase='round';
+  S.cntT.forEach(clearTimeout);S.cntT=[];
+  E.cntNum.textContent='ВПЕРЁД!';E.cntNum.classList.remove('pop');void E.cntNum.offsetWidth;E.cntNum.classList.add('pop');
+  AudioFX.go();
+  setTimeout(()=>E.ovCount.classList.add('hidden'),380);
+  S.startTs=performance.now();S.total=0;S.correct=S.idx;
+  startTimer(durationMs);
+  renderPlayers();renderBanner();renderPips();
+  if(S.ide&&!S.ideToasted){S.ideToasted=true;toast('⌨ IDE-режим: закрывающие скобки и кавычки печатаются сами','success');}
+  setTimeout(tryFocus,400);
+}
+function runCountdown(){
+  S.cntT.forEach(clearTimeout);S.cntT=[];
+  E.ovCount.classList.remove('hidden');
+  const seq=['3','2','1'];
+  seq.forEach((n,i)=>{
+    S.cntT.push(setTimeout(()=>{
+      E.cntNum.textContent=n;E.cntNum.classList.remove('pop');void E.cntNum.offsetWidth;E.cntNum.classList.add('pop');
+      AudioFX.count();
+    },i*1000+150));
+  });
+}
+
+/* ═══════════ рулетка ═══════════ */
+function cancelSpinAll(){
+  cancelAnimationFrame(S.spin.raf);clearTimeout(S.spin.closeT);clearTimeout(S.spin.hammerT);
+  S.spin.active=false;S.spin.ev=null;
+}
+function onSpin(ev,opts){
+  opts=opts||{};
+  S.spinning=ev;
+  const p=P(ev.id);if(p){p.spinning=true;p.locked=true;}
+  renderPlayers();
+  const typingNow=iAmTyping();
+  if(ev.id===S.meId||!typingNow||S.phase!=='round'){
+    openSpin(ev,ev.id!==S.meId,opts.elapsed||0);
+  }else{
+    showMini(ev);
+  }
+  renderBanner();
+}
+function openSpin(ev,watch,elapsed){
+  clearTimeout(S.spin.closeT);clearTimeout(S.spin.hammerT);cancelAnimationFrame(S.spin.raf);
+  hideMini();
+  S.spin.active=true;S.spin.watch=watch;S.spin.ev=ev;
+  E.cylReveal.innerHTML='';
+  E.cylRot.setAttribute('transform','rotate(0 160 160)');
+  E.spinStamp.className='spin-stamp hidden';
+  E.spinResultSub.textContent='';E.spinResultSub.className='';
+  E.hole.classList.add('hidden');E.spinFx.innerHTML='';
+  E.hammer.classList.remove('cock');
+  E.spinChip.textContent=ev.reason==='errors'?'ТРИ ОШИБКИ':'ВРЕМЯ ВЫШЛО';
+  E.spinChip.dataset.tone=ev.reason==='errors'?'red':'amber';
+  const p=P(ev.id);const name=p?p.name:'Игрок';
+  E.spinTitle.textContent=watch?name+' крутит барабан':'Твой барабан крутится…';
+  E.spinSub.textContent=ev.loaded+' '+plural(ev.loaded,'патрон','патрона','патронов')+' из 6 · шанс выжить: '+Math.round((6-ev.loaded)/6*100)+'%';
+  E.ovSpin.classList.remove('hidden');
+  renderFocusVeil();
+  const dur=Math.max(700,2700-elapsed);
+  animateCyl(ev.chamber,dur);
+}
+function animateCyl(chamber,dur){
+  const target=1800-chamber*60;
+  const t0=performance.now();let lastSlot=-1;
+  const step=t=>{
+    const k=Math.min(1,(t-t0)/dur);
+    const e=1-Math.pow(1-k,4);
+    const a=target*e;
+    E.cylRot.setAttribute('transform','rotate('+a+' 160 160)');
+    const slot=Math.floor(((a%360)+360)%360/60);
+    if(slot!==lastSlot){lastSlot=slot;AudioFX.ratchet(0.45+0.55*(1-k));}
+    if(k<1)S.spin.raf=requestAnimationFrame(step);
+  };
+  S.spin.raf=requestAnimationFrame(step);
+}
+function landReveal(ev){
+  const p=chamberPos(ev.chamber);
+  const ring=document.createElementNS(NS,'circle');
+  ring.setAttribute('cx',p.x);ring.setAttribute('cy',p.y);ring.setAttribute('r',44);
+  ring.setAttribute('fill','none');ring.setAttribute('stroke',ev.dead?'#E5484D':'#34D399');
+  ring.setAttribute('stroke-width','4');ring.setAttribute('class','landed-ring');
+  E.cylReveal.appendChild(ring);
+  if(ev.dead){
+    const b=document.createElementNS(NS,'use');
+    b.setAttribute('href','#sym-bullet');
+    b.setAttribute('x',p.x-27);b.setAttribute('y',p.y-27);
+    b.setAttribute('width','54');b.setAttribute('height','54');
+    E.cylReveal.appendChild(b);
+  }
+}
+function onSpinResult(ev){
+  const p=P(ev.id);
+  if(p){
+    p.spinning=false;p.locked=false;p.mistakes=0;
+    if(ev.dead){p.dead=true;p.deadReason='bang';p.deathRound=S.round;}
+    else p.score+=150;
+  }
+  S.spinning=null;
+  renderPlayers();
+  if(p&&p.id===S.meId)renderPips();
+  const mine=ev.id===S.meId;
+  if(S.spin.active&&S.spin.ev&&S.spin.ev.id===ev.id){
+    cancelAnimationFrame(S.spin.raf);
+    E.cylRot.setAttribute('transform','rotate('+(1800-ev.chamber*60)+' 160 160)');
+    landReveal(ev);
+    E.hammer.classList.add('cock');AudioFX.cock();
+    S.spin.hammerT=setTimeout(()=>{
+      E.hammer.classList.remove('cock');
+      if(ev.dead){AudioFX.bang();bangFx();}
+      else{AudioFX.empty();clickFx();}
+      const nm=p?p.name:'Игрок';
+      E.spinStamp.textContent=ev.dead?'БАХ!':'ЩЁЛК!';
+      E.spinStamp.className='spin-stamp '+(ev.dead?'bang':'live');
+      E.spinResultSub.className=ev.dead?'bang':'live';
+      E.spinResultSub.textContent=ev.dead
+        ?(mine?'Пуля нашла тебя. Ты выбыл.':'💀 '+nm+' выбывает из игры.')
+        :(mine?'Осечка. Ты живёшь. +150 очков.':'😮‍💨 '+nm+' остаётся за столом. +150.');
+      if(ev.dead&&mine)AudioFX.lose();
+    },240);
+    S.spin.closeT=setTimeout(()=>closeSpin(),ev.dead?2200:1700);
+  }else{
+    miniResult(ev,p);
+    if(ev.dead)bangFlashOnly();
+  }
+  renderBanner();
+}
+function closeSpin(){
+  S.spin.active=false;S.spin.ev=null;
+  E.ovSpin.classList.add('hidden');
+  if(S.pending){
+    const pd=S.pending;S.pending=null;
+    if(pd.type==='summary')openSummary(pd.rows,pd.nextMs,pd.round);
+    else openOver(pd.data);
+    return;
+  }
+  renderBanner();
+  if(iAmTyping())setTimeout(tryFocus,80);
+}
+function bangFx(){
+  E.flash.classList.remove('on');void E.flash.offsetWidth;E.flash.classList.add('on');
+  E.app.classList.remove('shake');void E.app.offsetWidth;E.app.classList.add('shake');
+  E.hole.classList.remove('hidden');
+  for(let i=0;i<8;i++){
+    const pf=document.createElement('div');pf.className='puff';
+    pf.style.setProperty('--dx',(Math.random()*160-80)+'px');
+    pf.style.setProperty('--dy',(-40-Math.random()*110)+'px');
+    pf.style.animationDelay=(Math.random()*0.15)+'s';
+    E.spinFx.appendChild(pf);
+  }
+}
+function bangFlashOnly(){E.flash.classList.remove('on');void E.flash.offsetWidth;E.flash.classList.add('on');}
+function clickFx(){
+  E.spinResultSub.classList.add('live');
+}
+function showMini(ev){
+  clearTimeout(S.miniT);
+  const p=P(ev.id);
+  E.mini.classList.remove('hidden');
+  E.miniCyl.classList.add('spin');
+  E.miniText.innerHTML='';
+  const b=document.createElement('b');b.textContent='🎰 '+(p?p.name:'Игрок');
+  const sp=document.createElement('span');sp.textContent=(ev.reason==='errors'?'3 ошибки — ':'время вышло — ')+'крутит барабан…';
+  E.miniText.appendChild(b);E.miniText.appendChild(sp);
+}
+function miniResult(ev,p){
+  if(E.mini.classList.contains('hidden'))return;
+  E.miniCyl.classList.remove('spin');
+  const b=E.miniText.querySelector('b');const sp=E.miniText.querySelector('span');
+  if(ev.dead){if(b)b.textContent='💥 '+(p?p.name:'Игрок');if(sp)sp.textContent='БАХ! Выбывает.';}
+  else{if(b)b.textContent='✓ '+(p?p.name:'Игрок');if(sp)sp.textContent='щёлк… осечка, живёт (+150).';}
+  S.miniT=setTimeout(hideMini,1600);
+}
+function hideMini(){clearTimeout(S.miniT);E.mini.classList.add('hidden');E.miniCyl.classList.remove('spin');}
+
+/* ═══════════ итоги раунда ═══════════ */
+function fateChips(r){
+  const out=[];
+  if(r.fate.includes('finish'))out.push(['fin','✓ финиш']);
+  const clicks=r.fate.filter(f=>f==='click').length;
+  if(clicks)out.push(['clk','🎰 осечка'+(clicks>1?' ×'+clicks:'')]);
+  if(r.fate.includes('bang'))out.push(['bng','💥 пуля']);
+  if(r.fate.includes('left'))out.push(['miss','🏳 сбежал']);
+  if(!out.length)out.push(['miss',r.connected?'⏱ не успел':'📡 оффлайн']);
+  return out;
+}
+function openSummary(rows,nextMs,rnd){
+  if(S.spin.active){S.pending={type:'summary',rows,nextMs,round:rnd};return;}
+  S.phase='summary';stopTimer();hideMini();
+  E.ovCount.classList.add('hidden');E.ovOver.classList.add('hidden');Confetti.stop();
+  E.ovSummary.classList.remove('hidden');
+  E.sumRound.textContent='ИТОГИ РАУНДА '+rnd;
+  E.sumRows.innerHTML='';
+  const sorted=[...rows].sort((a,b)=>b.pts-a.pts);
+  sorted.forEach((r,i)=>{
+    const row=document.createElement('div');row.className='sum-row'+(r.dead?' dead':'');
+    row.style.animationDelay=(i*0.06)+'s';
+    const who=document.createElement('div');who.className='sum-who';
+    const av=document.createElement('span');av.textContent=r.dead?'💀':r.avatar;
+    const nm=document.createElement('span');nm.className='nm';nm.textContent=r.name;nm.style.color=r.color;
+    who.appendChild(av);who.appendChild(nm);
+    const ft=document.createElement('div');ft.className='fates';
+    fateChips(r).forEach(f=>{const c=document.createElement('span');c.className='fate '+f[0];c.textContent=f[1];ft.appendChild(c);});
+    const tm=document.createElement('div');tm.className='sum-num';tm.textContent=r.finished?fmtS(r.finishMs)+'с':'—';
+    const cp=document.createElement('div');cp.className='sum-num hide-m';cp.textContent=r.finished?r.cpm:'—';
+    const pt=document.createElement('div');pt.className='sum-pts';pt.textContent='+'+r.pts;
+    row.appendChild(who);row.appendChild(ft);row.appendChild(tm);row.appendChild(cp);row.appendChild(pt);
+    E.sumRows.appendChild(row);
+  });
+  const m=me();const iAmHost=m&&m.id===S.hostId;
+  E.btnNext.classList.toggle('hidden',!iAmHost);
+  E.sumNote.textContent=iAmHost?'Можешь ускорить — или подождать авто-старт':'Хост может ускорить. Следующий блок начнётся сам.';
+  cancelAnimationFrame(S.sumRaf);
+  const t0=performance.now(),total=Math.max(1,nextMs);
+  const ringStep=t=>{
+    const rem=Math.max(0,total-(t-t0));
+    E.sumSecs.textContent=Math.ceil(rem/1000);
+    E.sumRingFg.setAttribute('stroke-dashoffset',String(131.9*(1-rem/total)));
+    if(rem>0&&!E.ovSummary.classList.contains('hidden'))S.sumRaf=requestAnimationFrame(ringStep);
+  };
+  S.sumRaf=requestAnimationFrame(ringStep);
+}
+E.btnNext.addEventListener('click',()=>send({t:'next'}));
+
+/* ═══════════ финал ═══════════ */
+function openOver(data){
+  if(S.spin.active){S.pending={type:'over',data};return;}
+  S.phase='over';stopTimer();hideMini();cancelSpinAll();
+  E.ovSpin.classList.add('hidden');E.ovCount.classList.add('hidden');E.ovSummary.classList.add('hidden');
+  E.ovOver.classList.remove('hidden');
+  const w=data.winnerId?data.rows.find(r=>r.id===data.winnerId):null;
+  const solo=data.rows.length===1;
+  const m=me();
+  if(w){
+    E.overEmoji.textContent='🏆';
+    E.overTitle.textContent=m&&m.id===w.id?'ТЫ ВЫЖИЛ!':'ПОСЛЕДНИЙ ВЫЖИВШИЙ';
+    E.overTitle.classList.remove('draw');
+    E.overSub.innerHTML='';
+    E.overSub.appendChild(document.createTextNode('👑 '));
+    const b=document.createElement('b');b.textContent=w.name;b.style.color=w.color;E.overSub.appendChild(b);
+    E.overSub.appendChild(document.createTextNode(' забирает стол: '+w.score+' очков, '+w.survived+' '+plural(w.survived,'осечка','осечки','осечек')+' подряд с барабаном. +500 за победу.'));
+    Confetti.start();AudioFX.win();
+  }else{
+    E.overEmoji.textContent='☠️';
+    E.overTitle.textContent=solo?'СОЛО-ЗАБЕГ ОКОНЧЕН':'СТОЛ ПУСТ';
+    E.overTitle.classList.add('draw');
+    E.overSub.textContent=solo
+      ?'Ты продержался '+data.round+' '+plural(data.round,'раунд','раунда','раундов')+'. Позови одногруппцев — вместе веселее.'
+      :'Никто не пережил этот код. Последний патрон забрал всех.';
+    Confetti.stop();AudioFX.lose();
+  }
+  E.overRows.innerHTML='';
+  data.rows.forEach((r,i)=>{
+    const row=document.createElement('div');row.className='over-row'+(w&&r.id===w.id?' win':'');
+    row.style.animationDelay=(i*0.08)+'s';
+    const rk=document.createElement('div');rk.className='over-rank';rk.textContent=['🥇','🥈','🥉'][i]||'#'+(i+1);
+    const who=document.createElement('div');who.className='over-who';
+    const av=document.createElement('span');av.textContent=r.dead?'💀':r.avatar;
+    const nm=document.createElement('span');nm.className='nm';nm.textContent=r.name;nm.style.color=r.color;
+    who.appendChild(av);who.appendChild(nm);
+    if(r.id===S.meId){const yt=document.createElement('span');yt.className='you-tag';yt.textContent='ТЫ';who.appendChild(yt);}
+    const sc=document.createElement('div');sc.className='over-score';sc.textContent=r.score;
+    const ft=document.createElement('div');ft.className='over-fate';
+    ft.textContent=!r.dead?'🛡 выжил':r.deadReason==='left'?'🏳 раунд '+r.deathRound:'💀 раунд '+r.deathRound;
+    row.appendChild(rk);row.appendChild(who);row.appendChild(sc);row.appendChild(ft);
+    E.overRows.appendChild(row);
+  });
+  E.overStats.textContent='Раундов: '+data.round+' · Осечек: '+data.stats.clicks+' · Выстрелов: '+data.stats.shots;
+  const iAmHost=m&&m.id===S.hostId;
+  E.btnRestart.classList.toggle('hidden',!iAmHost);
+  E.overNote.textContent=iAmHost?'Наблюдатели получат места автоматически':'Ждём, пока хост запустит новую игру…';
+}
+E.btnRestart.addEventListener('click',()=>send({t:'restart'}));
+
+/* конфетти */
+const Confetti={
+  raf:0,parts:[],ctx:null,running:false,
+  start(){
+    const cv=E.confetti;this.ctx=cv.getContext('2d');
+    const dpr=Math.min(2,window.devicePixelRatio||1);
+    cv.width=innerWidth*dpr;cv.height=innerHeight*dpr;this.ctx.setTransform(dpr,0,0,dpr,0,0);
+    const cols=['#E8A33D','#FCD34D','#8B5CF6','#C4B5FD','#38BDF8','#34D399','#F472B6','#E5484D'];
+    this.parts=Array.from({length:150},()=>({
+      x:Math.random()*innerWidth,y:-Math.random()*innerHeight,
+      vx:(Math.random()-.5)*1.6,vy:1.6+Math.random()*2.8,
+      s:4+Math.random()*7,r:Math.random()*Math.PI,vr:(Math.random()-.5)*.18,
+      c:cols[Math.floor(Math.random()*cols.length)]
+    }));
+    if(!this.running){this.running=true;this.loop();}
+  },
+  loop(){
+    if(!this.running)return;
+    const ctx=this.ctx;ctx.clearRect(0,0,innerWidth,innerHeight);
+    for(const p of this.parts){
+      p.x+=p.vx;p.y+=p.vy;p.r+=p.vr;
+      if(p.y>innerHeight+20){p.y=-20;p.x=Math.random()*innerWidth;}
+      ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.r);
+      ctx.fillStyle=p.c;ctx.fillRect(-p.s/2,-p.s/2,p.s,p.s*0.62);ctx.restore();
+    }
+    this.raf=requestAnimationFrame(()=>this.loop());
+  },
+  stop(){this.running=false;cancelAnimationFrame(this.raf);if(this.ctx)this.ctx.clearRect(0,0,innerWidth,innerHeight);}
+};
+window.addEventListener('resize',()=>{
+  if(Confetti.running){const cv=E.confetti;const dpr=Math.min(2,window.devicePixelRatio||1);cv.width=innerWidth*dpr;cv.height=innerHeight*dpr;Confetti.ctx.setTransform(dpr,0,0,dpr,0,0);}
+});
+
+/* ═══════════ лента и тосты ═══════════ */
+function addFeed(icon,text,tone){
+  const d=document.createElement('div');d.className='fe '+(tone||'info');
+  const i=document.createElement('span');i.className='fi';i.textContent=icon;
+  const t=document.createElement('span');t.textContent=text;
+  d.appendChild(i);d.appendChild(t);
+  E.feed.prepend(d);
+  while(E.feed.children.length>30)E.feed.removeChild(E.feed.lastChild);
+}
+function toast(text,tone){
+  const d=document.createElement('div');d.className='toast '+(tone||'');d.textContent=text;
+  E.toasts.appendChild(d);
+  setTimeout(()=>d.classList.add('out'),2300);
+  setTimeout(()=>d.remove(),2800);
+}
+addFeed('🎲','Добро пожаловать за стол. Печатай C# — или крути барабан.','info');
+
+/* глобальная защита от вставки во время раунда */
+document.addEventListener('paste',e=>{if(S.phase==='round'&&iAmTyping()){e.preventDefault();toast('Без копипасты 😉','warn');}});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Tab'&&iAmTyping())e.preventDefault();
+});
+
+renderPips();
+connect();
+})();
+</script>
+</body>
+</html>

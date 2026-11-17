@@ -1,0 +1,15 @@
+{
+  "name": "code-roulette",
+  "version": "1.0.0",
+  "private": true,
+  "description": "КОД-РУЛЕТКА — мультиплеер: печать C# на скорость и русская рулетка",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "tunnel": "cloudflared tunnel --url http://localhost:3000"
+  },
+  "engines": {
+    "node": ">=16"
+  },
+  "dependencies": {}
+}
